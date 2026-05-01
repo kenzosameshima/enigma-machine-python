@@ -1,7 +1,7 @@
-# Entry point for Enigma machine simulator
-# Imports and runs the CLI from the modularized structure
+"""Entry point for the Enigma machine simulator."""
 
-from cli import main
+from enigma.cli import main
+
 
 if __name__ == "__main__":
     main()
