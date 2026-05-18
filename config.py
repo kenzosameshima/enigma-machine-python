@@ -1,4 +1,9 @@
-"""Compatibility wrapper for static Enigma configuration imports."""
+"""
+Compatibility wrapper.
+
+The canonical implementation lives in enigma.config.
+This module is kept to avoid breaking older imports.
+"""
 
 from enigma.data import REFLECTORS, ROTOR_SPECS
 from enigma.modes import MachineModeName, ReflectorName

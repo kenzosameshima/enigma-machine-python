@@ -1,4 +1,9 @@
-"""Compatibility wrapper for the package engine API."""
+"""
+Compatibility wrapper.
+
+The canonical implementation lives in enigma.engine.
+This module is kept to avoid breaking older imports.
+"""
 
 from enigma.alphabet import BASE, DEFAULT_RINGS, DEFAULT_ROTORS
 from enigma.config import EnigmaConfig, EnigmaConfigBuilder, parse_key_positions

@@ -23,6 +23,11 @@
 - Refactored CLI flow using command classes.
 - Moved engine responsibilities out of the previous monolithic processing flow.
 - Updated README instructions for the new package structure and test commands.
+- Directly constructed `EnigmaMachine` instances now defensively copy rotor
+  objects by default. Compatibility helpers that historically mutate external
+  rotor objects preserve their previous behavior.
+- Centralized alphabet letter/index conversion helpers to avoid scattered
+  string-index conversion logic.
 
 ### Fixed
 

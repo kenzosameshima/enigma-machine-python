@@ -5,8 +5,9 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from collections.abc import Sequence
 
-from .alphabet import BASE
+from .alphabet import is_base_letter
 from .config import EnigmaConfig, EnigmaConfigBuilder
+from .engine import normalize_pairs
 from .factory import EnigmaFactory
 from .modes import MachineModeName, ReflectorName
 
@@ -20,12 +21,15 @@ def prompt_rotor_order() -> tuple[str, str, str]:
     raw = input("Enter rotor order left-to-right (e.g. I II III): ").strip().upper()
     parts = tuple(part for part in raw.replace(",", " ").split() if part)
 
+    if not parts:
+        print("Using default rotor order I II III.")
+        return DEFAULT_ROTOR_ORDER
     if len(parts) != 3:
-        return DEFAULT_ROTOR_ORDER
+        raise ValueError("Rotor order must contain exactly 3 moving rotors")
     if any(part not in MOVING_ROTORS for part in parts):
-        return DEFAULT_ROTOR_ORDER
+        raise ValueError("Rotor order must use I, II, III, IV, or V")
     if len(set(parts)) != 3:
-        return DEFAULT_ROTOR_ORDER
+        raise ValueError("Rotor order cannot repeat rotors")
     return parts
 
 
@@ -33,30 +37,39 @@ def prompt_ring_settings(count: int) -> tuple[int, ...]:
     default = tuple(1 for _ in range(count))
     example = " ".join(["1"] * count)
     raw = input(f"Enter {count} ring settings 1-26 (e.g. {example}): ").strip()
+    if not raw:
+        print(f"Using default ring settings: {example}.")
+        return default
+
     parts = tuple(part for part in raw.replace(",", " ").split() if part)
     if len(parts) != count:
-        return default
+        raise ValueError(f"Expected {count} ring settings")
 
     try:
         values = tuple(int(part) for part in parts)
     except ValueError:
-        return default
+        raise ValueError("Ring settings must be numeric") from None
 
     if any(value < 1 or value > 26 for value in values):
-        return default
+        raise ValueError("Ring settings must be between 1 and 26")
     return values
 
 
-def prompt_plugboard() -> list[tuple[str, str]]:
+def prompt_plugboard() -> tuple[tuple[str, str], ...]:
     raw = input("Plugboard pairs (e.g. AB CD EF), blank for none: ").strip().upper()
     if not raw:
-        return []
+        return ()
 
-    pairs = []
+    pairs: list[tuple[str, str]] = []
     for token in raw.replace(",", " ").split():
-        if len(token) == 2 and token[0] in BASE and token[1] in BASE:
-            pairs.append((token[0], token[1]))
-    return pairs
+        if (
+            len(token) != 2
+            or not is_base_letter(token[0])
+            or not is_base_letter(token[1])
+        ):
+            raise ValueError(f"Invalid plugboard pair: {token}")
+        pairs.append((token[0], token[1]))
+    return normalize_pairs(pairs)
 
 
 def prompt_reflector(
@@ -67,15 +80,20 @@ def prompt_reflector(
     raw = input(prompt).strip().upper()
     reflector = raw or default.value
     if reflector not in {item.value for item in allowed}:
-        return default.value
+        raise ValueError(
+            "Reflector must be one of: "
+            + ", ".join(sorted(item.value for item in allowed))
+        )
     return reflector
 
 
 def prompt_greek_rotor() -> str:
     raw = input("Greek rotor (BETA/GAMMA, default BETA): ").strip().upper()
+    if not raw:
+        return "BETA"
     if raw in {"BETA", "GAMMA"}:
         return raw
-    return "BETA"
+    raise ValueError("Greek rotor must be BETA or GAMMA")
 
 
 def process_config(config: EnigmaConfig) -> tuple[str, str]:

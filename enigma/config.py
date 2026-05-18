@@ -4,14 +4,15 @@ from __future__ import annotations
 
 from collections.abc import Iterable, Sequence
 from dataclasses import dataclass, field
+from typing import TypeVar, cast
 
 from .alphabet import (
-    BASE,
     DEFAULT_M4_RINGS,
     DEFAULT_POSITIONS,
     DEFAULT_RINGS,
     DEFAULT_ROTORS,
     MOVING_ROTORS,
+    is_base_letter,
 )
 from .data import REFLECTORS, ROTOR_SPECS
 from .modes import (
@@ -23,14 +24,23 @@ from .modes import (
 )
 from .plugboard import Plugboard
 
+T = TypeVar("T")
+
 
 def parse_key_positions(key: str, rotor_count: int) -> str:
     """Keep valid letters and pad missing positions with A."""
 
-    normalized = "".join(ch for ch in key.upper() if ch in BASE)
+    normalized = "".join(ch for ch in key.upper() if is_base_letter(ch))
     if len(normalized) < rotor_count:
         normalized = (normalized + ("A" * rotor_count))[:rotor_count]
     return normalized[:rotor_count]
+
+
+def _normalize_key_positions(key: str, rotor_count: int) -> str:
+    normalized = "".join(ch for ch in key.upper() if is_base_letter(ch))
+    if len(normalized) != rotor_count:
+        raise ValueError(f"Key must contain exactly {rotor_count} letters")
+    return normalized
 
 
 def _normalize_rotor_name(name: str) -> str:
@@ -87,39 +97,35 @@ class EnigmaConfigBuilder:
         self._plugboard_pairs: Sequence[tuple[str, str]] = ()
         self._greek_rotor = "BETA"
 
-    def text(self, value: str) -> "EnigmaConfigBuilder":
+    def text(self, value: str) -> EnigmaConfigBuilder:
         self._text = value
         return self
 
-    def mode(self, value: MachineModeName | str | MachineMode) -> "EnigmaConfigBuilder":
+    def mode(self, value: MachineModeName | str | MachineMode) -> EnigmaConfigBuilder:
         self._mode = value
         return self
 
-    def rotors(self, *rotor_order: str | Sequence[str]) -> "EnigmaConfigBuilder":
+    def rotors(self, *rotor_order: str | Sequence[str]) -> EnigmaConfigBuilder:
         self._rotor_order = self._unpack_sequence(rotor_order)
         return self
 
-    def rings(self, *ring_settings: int | Sequence[int]) -> "EnigmaConfigBuilder":
+    def rings(self, *ring_settings: int | Sequence[int]) -> EnigmaConfigBuilder:
         self._ring_settings = self._unpack_sequence(ring_settings)
         return self
 
-    def key(self, value: str) -> "EnigmaConfigBuilder":
+    def key(self, value: str) -> EnigmaConfigBuilder:
         self._key = value
         return self
 
-    def reflector(
-        self, value: str | ReflectorName
-    ) -> "EnigmaConfigBuilder":
+    def reflector(self, value: str | ReflectorName) -> EnigmaConfigBuilder:
         self._reflector_name = value
         return self
 
-    def plugboard(
-        self, pairs: Sequence[tuple[str, str]] | None
-    ) -> "EnigmaConfigBuilder":
+    def plugboard(self, pairs: Sequence[tuple[str, str]] | None) -> EnigmaConfigBuilder:
         self._plugboard_pairs = pairs or ()
         return self
 
-    def greek(self, value: str) -> "EnigmaConfigBuilder":
+    def greek(self, value: str) -> EnigmaConfigBuilder:
         self._greek_rotor = value
         return self
 
@@ -128,9 +134,7 @@ class EnigmaConfigBuilder:
         ring_settings = self._ring_settings
         if ring_settings is None:
             ring_settings = (
-                DEFAULT_M4_RINGS
-                if strategy.rotor_count() == 4
-                else DEFAULT_RINGS
+                DEFAULT_M4_RINGS if strategy.rotor_count() == 4 else DEFAULT_RINGS
             )
 
         config = EnigmaConfig(
@@ -138,7 +142,7 @@ class EnigmaConfigBuilder:
             mode=strategy.name,
             rotor_order=_validate_moving_rotors(self._rotor_order),
             ring_settings=_validate_ring_settings(ring_settings),
-            positions=parse_key_positions(self._key, strategy.rotor_count()),
+            positions=_normalize_key_positions(self._key, strategy.rotor_count()),
             reflector_name=_normalize_reflector_name(self._reflector_name),
             plugboard_pairs=tuple(self._plugboard_pairs),
             greek_rotor=_normalize_rotor_name(self._greek_rotor),
@@ -150,11 +154,11 @@ class EnigmaConfigBuilder:
         return config
 
     @staticmethod
-    def _unpack_sequence(values: Iterable[object]) -> Sequence[object]:
+    def _unpack_sequence(values: Iterable[T | Sequence[T]]) -> Sequence[T]:
         values = tuple(values)
         if len(values) == 1 and isinstance(values[0], (list, tuple)):
-            return values[0]
-        return values
+            return cast(Sequence[T], values[0])
+        return cast(tuple[T, ...], values)
 
     @staticmethod
     def _validate_common(config: EnigmaConfig) -> None:

@@ -9,8 +9,17 @@ from .config import EnigmaConfigBuilder, parse_key_positions
 from .factory import EnigmaFactory
 from .machine import EnigmaMachine
 from .modes import MachineModeName, ReflectorName
-from .plugboard import Plugboard
+from .plugboard import Plugboard, _normalize_pair
 from .rotors import Rotor
+
+__all__ = [
+    "enigma_process",
+    "normalize_pairs",
+    "parse_key_positions",
+    "plugboard_swap",
+    "process_char",
+    "step_rotors",
+]
 
 
 def plugboard_swap(char: str, pairs: Sequence[tuple[str, str]]) -> str:
@@ -19,27 +28,25 @@ def plugboard_swap(char: str, pairs: Sequence[tuple[str, str]]) -> str:
     return Plugboard(pairs).swap(char)
 
 
-def normalize_pairs(
-    pairs: Sequence[tuple[str, str]]
-) -> tuple[tuple[str, str], ...]:
+def normalize_pairs(pairs: Sequence[tuple[str, str]]) -> tuple[tuple[str, str], ...]:
     """Validate and normalize plugboard pairs."""
 
-    plugboard = Plugboard(pairs)
+    Plugboard(pairs)
     normalized: list[tuple[str, str]] = []
-    seen: set[str] = set()
-    for first, second in plugboard.mapping.items():
-        if first in seen or second in seen:
-            continue
-        normalized.append((first, second))
-        seen.add(first)
-        seen.add(second)
+    for pair in pairs:
+        normalized.append(_normalize_pair(pair))
     return tuple(normalized)
 
 
 def step_rotors(rotors: Sequence[Rotor]) -> None:
     """Compatibility helper for callers that used the old function."""
 
-    EnigmaMachine(rotors, ReflectorName.B.value, Plugboard())._step_rotors()
+    EnigmaMachine(
+        rotors,
+        ReflectorName.B.value,
+        Plugboard(),
+        copy_rotors=False,
+    )._step_rotors()
 
 
 def process_char(

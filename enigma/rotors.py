@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from .alphabet import BASE
+from .alphabet import index_to_letter, letter_to_index
 
 
 @dataclass(frozen=True)
@@ -44,14 +44,14 @@ class Rotor:
         self.name = self.spec.name
         self.state = state or RotorState(
             ring=ring_setting - 1,
-            position=BASE.index(position),
+            position=letter_to_index(position),
         )
         self.can_step = can_step
-        self.wiring = [BASE.index(char) for char in self.spec.wiring]
+        self.wiring = [letter_to_index(char) for char in self.spec.wiring]
         self.inverse_wiring = [0] * 26
         for index, mapped in enumerate(self.wiring):
             self.inverse_wiring[mapped] = index
-        self.notches = [BASE.index(char) for char in self.spec.notch]
+        self.notches = [letter_to_index(char) for char in self.spec.notch]
 
     @property
     def ring(self) -> int:
@@ -69,7 +69,7 @@ class Rotor:
     def get_position_letter(self) -> str:
         """Return the current window letter."""
 
-        return BASE[self.position]
+        return index_to_letter(self.position)
 
     def step(self) -> None:
         """Advance the rotor if it is allowed to move."""

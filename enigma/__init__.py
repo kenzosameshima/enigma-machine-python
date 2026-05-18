@@ -1,8 +1,13 @@
 """Enigma machine package."""
 
 from .config import EnigmaConfig, EnigmaConfigBuilder, parse_key_positions
-from .engine import enigma_process, normalize_pairs, plugboard_swap, process_char
-from .engine import step_rotors
+from .engine import (
+    enigma_process,
+    normalize_pairs,
+    plugboard_swap,
+    process_char,
+    step_rotors,
+)
 from .factory import EnigmaFactory
 from .machine import EnigmaMachine
 from .modes import MachineModeName, ReflectorName

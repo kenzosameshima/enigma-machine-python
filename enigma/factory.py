@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from .alphabet import BASE
+from .alphabet import letter_to_index
 from .config import EnigmaConfig
 from .data import ROTOR_SPECS
 from .machine import EnigmaMachine
@@ -56,12 +56,13 @@ class EnigmaFactory:
         return [
             Rotor(
                 ROTOR_SPECS[name],
-                RotorState(ring=ring - 1, position=BASE.index(position)),
+                RotorState(ring=ring - 1, position=letter_to_index(position)),
             )
             for name, ring, position in zip(
                 config.rotor_order,
                 config.ring_settings[:3],
                 config.positions[:3],
+                strict=True,
             )
         ]
 
@@ -71,7 +72,7 @@ class EnigmaFactory:
             ROTOR_SPECS[config.greek_rotor],
             RotorState(
                 ring=config.ring_settings[3] - 1,
-                position=BASE.index(config.positions[3]),
+                position=letter_to_index(config.positions[3]),
             ),
             can_step=False,
         )

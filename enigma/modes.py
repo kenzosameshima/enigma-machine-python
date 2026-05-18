@@ -28,9 +28,7 @@ class ReflectorName(str, Enum):
 
 
 THREE_ROTOR_REFLECTORS = frozenset({ReflectorName.B.value, ReflectorName.C.value})
-M4_REFLECTORS = frozenset(
-    {ReflectorName.B_THIN.value, ReflectorName.C_THIN.value}
-)
+M4_REFLECTORS = frozenset({ReflectorName.B_THIN.value, ReflectorName.C_THIN.value})
 
 
 class MachineMode(ABC):
@@ -39,7 +37,7 @@ class MachineMode(ABC):
     name: MachineModeName
 
     @abstractmethod
-    def validate(self, config: "EnigmaConfig") -> None:
+    def validate(self, config: EnigmaConfig) -> None:
         """Validate mode-specific configuration."""
 
     @abstractmethod
@@ -57,7 +55,7 @@ class ThreeRotorMode(MachineMode):
     def __init__(self, name: MachineModeName = MachineModeName.WEHRMACHT) -> None:
         self.name = name
 
-    def validate(self, config: "EnigmaConfig") -> None:
+    def validate(self, config: EnigmaConfig) -> None:
         if len(config.rotor_order) != self.moving_rotor_count():
             raise ValueError("3-rotor mode requires 3 rotor names")
         if len(config.ring_settings) != self.rotor_count():
@@ -79,7 +77,7 @@ class M4Mode(MachineMode):
 
     name = MachineModeName.M4
 
-    def validate(self, config: "EnigmaConfig") -> None:
+    def validate(self, config: EnigmaConfig) -> None:
         from .alphabet import GREEK_ROTORS
 
         if len(config.rotor_order) != self.moving_rotor_count():
