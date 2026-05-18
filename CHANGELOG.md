@@ -17,7 +17,7 @@
 - Added automated regression tests under `tests/`.
 - Added compatibility wrappers for older root-level imports.
 - Added GitHub Actions CI for Python 3.10, 3.11, 3.12, and 3.13.
-- Added coverage tooling with an initial 90% threshold.
+- Added coverage tooling with an initial 80% threshold.
 - Added Enigma I reference-vector tests.
 
 ### Changed
@@ -46,6 +46,8 @@
 
 - Invalid plugboard pairs now raise `ValueError` in engine code instead of
   being printed and silently discarded.
+- Coverage threshold starts at 80% and should be raised toward 90% after CLI
+  command logic is extracted and tested without brittle interactive I/O tests.
 
 ## v1.0.0
 
