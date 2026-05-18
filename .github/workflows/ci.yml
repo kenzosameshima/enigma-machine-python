@@ -7,6 +7,10 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.11", "3.12", "3.13"]
 
     steps:
       - name: Check out repository
@@ -15,16 +19,19 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          python-version: ${{ matrix.python-version }}
+          cache: "pip"
 
       - name: Install package and development tools
-        run: python -m pip install -e ".[dev]"
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[dev]"
 
       - name: Run tests
-        run: python -m pytest
+        run: python -m pytest --cov=enigma --cov-report=term-missing --cov-fail-under=90
 
       - name: Run lint
-        run: python -m ruff check .
+        run: python -m ruff check enigma tests
 
       - name: Run type checks
         run: python -m mypy enigma

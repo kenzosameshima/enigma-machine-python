@@ -15,6 +15,8 @@ class Plugboard:
 
     @property
     def mapping(self) -> dict[str, str]:
+        """Return a copy of the normalized bidirectional mapping."""
+
         return dict(self._mapping)
 
     def swap(self, char: str) -> str:

@@ -19,6 +19,8 @@ class EnigmaFactory:
         config: EnigmaConfig,
         observer: EnigmaObserver | None = None,
     ) -> EnigmaMachine:
+        """Validate config and return a fresh machine with isolated rotor state."""
+
         config.mode_strategy.validate(config)
         creators = {
             3: self._create_three_rotor,

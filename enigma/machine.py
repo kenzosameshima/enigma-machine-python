@@ -18,7 +18,12 @@ from .rotors import Rotor, RotorState
 
 
 class EnigmaMachine:
-    """Facade that executes Enigma processing."""
+    """Executable Enigma machine with mutable rotor positions.
+
+    Direct construction defensively copies rotor objects by default so separate
+    machines cannot accidentally share stepping state. Pass copy_rotors=False
+    only for compatibility helpers that intentionally mutate external rotors.
+    """
 
     def __init__(
         self,

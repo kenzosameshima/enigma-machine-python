@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.2.2-alpha
 
 ### Added
 
@@ -16,6 +16,9 @@
   from mutable rotor state.
 - Added automated regression tests under `tests/`.
 - Added compatibility wrappers for older root-level imports.
+- Added GitHub Actions CI for Python 3.10, 3.11, 3.12, and 3.13.
+- Added coverage tooling with an initial 90% threshold.
+- Added Enigma I reference-vector tests.
 
 ### Changed
 
@@ -28,6 +31,10 @@
   rotor objects preserve their previous behavior.
 - Centralized alphabet letter/index conversion helpers to avoid scattered
   string-index conversion logic.
+- Clarified public API contracts, docstrings, and validation error messages for
+  predictable `ValueError` failures on invalid configuration.
+- Split tests by responsibility across engine, machine, config, rotors,
+  plugboard, CLI, and compatibility modules.
 
 ### Fixed
 

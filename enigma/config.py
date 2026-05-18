@@ -37,6 +37,8 @@ def parse_key_positions(key: str, rotor_count: int) -> str:
 
 
 def _normalize_key_positions(key: str, rotor_count: int) -> str:
+    if not isinstance(key, str):
+        raise ValueError("Key must be text containing rotor position letters")
     normalized = "".join(ch for ch in key.upper() if is_base_letter(ch))
     if len(normalized) != rotor_count:
         raise ValueError(f"Key must contain exactly {rotor_count} letters")
@@ -44,12 +46,16 @@ def _normalize_key_positions(key: str, rotor_count: int) -> str:
 
 
 def _normalize_rotor_name(name: str) -> str:
+    if not isinstance(name, str):
+        raise ValueError("Rotor names must be text")
     return name.strip().upper()
 
 
 def _normalize_reflector_name(name: str | ReflectorName) -> str:
     if isinstance(name, ReflectorName):
         return name.value
+    if not isinstance(name, str):
+        raise ValueError("Reflector name must be text")
     return name.strip().upper()
 
 
@@ -63,7 +69,10 @@ def _validate_moving_rotors(rotor_order: Sequence[str]) -> tuple[str, ...]:
 
 
 def _validate_ring_settings(ring_settings: Sequence[int]) -> tuple[int, ...]:
-    normalized = tuple(int(setting) for setting in ring_settings)
+    try:
+        normalized = tuple(int(setting) for setting in ring_settings)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("Ring settings must be integers between 1 and 26") from exc
     if any(setting < 1 or setting > 26 for setting in normalized):
         raise ValueError("Ring settings must be between 1 and 26")
     return normalized
@@ -98,38 +107,56 @@ class EnigmaConfigBuilder:
         self._greek_rotor = "BETA"
 
     def text(self, value: str) -> EnigmaConfigBuilder:
+        """Set input text. Text is normalized to uppercase during build."""
+
         self._text = value
         return self
 
     def mode(self, value: MachineModeName | str | MachineMode) -> EnigmaConfigBuilder:
+        """Set machine mode: wehrmacht, naval, m4, or a mode strategy."""
+
         self._mode = value
         return self
 
     def rotors(self, *rotor_order: str | Sequence[str]) -> EnigmaConfigBuilder:
+        """Set moving rotors left-to-right."""
+
         self._rotor_order = self._unpack_sequence(rotor_order)
         return self
 
     def rings(self, *ring_settings: int | Sequence[int]) -> EnigmaConfigBuilder:
+        """Set one-based ring settings."""
+
         self._ring_settings = self._unpack_sequence(ring_settings)
         return self
 
     def key(self, value: str) -> EnigmaConfigBuilder:
+        """Set initial rotor window positions."""
+
         self._key = value
         return self
 
     def reflector(self, value: str | ReflectorName) -> EnigmaConfigBuilder:
+        """Set reflector name."""
+
         self._reflector_name = value
         return self
 
     def plugboard(self, pairs: Sequence[tuple[str, str]] | None) -> EnigmaConfigBuilder:
+        """Set plugboard letter pairs."""
+
         self._plugboard_pairs = pairs or ()
         return self
 
     def greek(self, value: str) -> EnigmaConfigBuilder:
+        """Set the fixed Greek rotor used by M4 mode."""
+
         self._greek_rotor = value
         return self
 
     def build(self) -> EnigmaConfig:
+        """Validate and return an immutable configuration object."""
+
         strategy = mode_strategy_for(self._mode)
         ring_settings = self._ring_settings
         if ring_settings is None:

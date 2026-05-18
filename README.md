@@ -20,6 +20,8 @@ the `enigma` package.
 
 Use Python 3.10 or newer.
 
+Current prerelease version: `0.2.2-alpha`.
+
 ```bash
 git clone <repo-url>
 cd enigma-machine-python
@@ -29,6 +31,20 @@ python3 -m pip install -e ".[dev]"
 ```
 
 For runtime-only use, the package has no mandatory third-party dependencies.
+
+## Testing
+
+Run tests in a minimal environment without coverage:
+
+```bash
+python3 -m pytest
+```
+
+Run the full dev dependency test command with coverage tracking:
+
+```bash
+python3 -m pytest --cov=enigma --cov-branch
+```
 
 ## CLI Usage
 
@@ -115,16 +131,43 @@ machine = EnigmaFactory().create(config)
 ciphertext = machine.process_text(config.text)
 ```
 
-Directly constructed `EnigmaMachine` instances defensively copy rotor objects by
-default. This prevents accidental state sharing between machines. Compatibility
-helpers that historically mutate external rotor objects preserve their previous
-behavior.
-
 Older imports are still supported:
 
 ```python
 from engine import enigma_process
 ```
+
+## Public API Contract
+
+The supported public API is:
+
+- `enigma.enigma_process`
+- `enigma.EnigmaConfig`
+- `enigma.EnigmaConfigBuilder`
+- `enigma.EnigmaFactory`
+- `enigma.MachineModeName`
+- `enigma.ReflectorName`
+- `enigma.Plugboard`
+- `enigma.Rotor`, `enigma.RotorSpec`, and `enigma.RotorState`
+
+Root-level `engine.py`, `cli.py`, and `config.py` are compatibility wrappers for
+legacy imports. They remain supported, but new code should import from
+`enigma`.
+
+`enigma_process()` is the preferred high-level API. It builds a fresh machine for
+each call, normalizes input text to uppercase, preserves spaces, punctuation, and
+numbers, and advances rotors only for A-Z characters.
+
+Invalid user configuration raises `ValueError`. Expected validation failures
+include unsupported modes, invalid rotor names, repeated moving rotors, ring
+settings outside 1-26, incorrectly sized keys, incompatible reflectors, invalid
+Greek rotors, and invalid plugboard pairs.
+
+`EnigmaFactory.create()` returns a fresh `EnigmaMachine` with isolated rotor
+state. Directly constructed `EnigmaMachine` instances defensively copy rotor
+objects by default. This prevents accidental state sharing between machines.
+Compatibility helpers that historically mutate external rotor objects preserve
+their previous behavior.
 
 ## Supported Modes
 
@@ -226,9 +269,16 @@ Run the test suite:
 python3 -m pytest
 ```
 
+Run tests with coverage:
+
+```bash
+python3 -m pytest --cov=enigma --cov-report=term-missing --cov-fail-under=90
+```
+
 The suite covers round trips, plugboard validation, M4 validation, key sizing,
 rotor stepping, turnover, double-step behavior, mutable machine state, and the
-Daily Key Sheet CLI command.
+Daily Key Sheet CLI command. It also includes Enigma I reference vectors from
+<https://kerryb.github.io/enigma/>.
 
 ## Linting And Formatting
 
@@ -236,7 +286,7 @@ Recommended development checks:
 
 ```bash
 python3 -m pytest
-python3 -m ruff check .
+python3 -m ruff check enigma tests
 python3 -m ruff format .
 ```
 
@@ -245,6 +295,25 @@ Optional type checking:
 ```bash
 python3 -m mypy enigma
 ```
+
+GitHub Actions runs tests with coverage, Ruff, and mypy on Python 3.10, 3.11,
+3.12, and 3.13.
+
+## Release Preparation
+
+Before tagging a release:
+
+```bash
+git status
+python3 -m pytest
+python3 -m ruff check enigma tests
+python3 -m mypy enigma
+```
+
+Review `CHANGELOG.md`, confirm the version in `pyproject.toml`, create an
+annotated tag, and attach a release description summarizing compatibility,
+validation, and test coverage changes. Do not publish to PyPI unless package
+distribution is an explicit goal for that release.
 
 ## Limitations
 

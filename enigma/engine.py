@@ -79,7 +79,13 @@ def enigma_process(
     reflector_name: str = ReflectorName.B.value,
     greek_rotor_name: str = "BETA",
 ) -> str:
-    """Build an Enigma machine and process text."""
+    """Build a configured Enigma machine and process text.
+
+    The function returns uppercase Enigma output for alphabetic input, preserves
+    non-alphabetic characters, and advances rotors only for A-Z characters.
+    Invalid modes, rotors, ring settings, keys, reflectors, Greek rotors, or
+    plugboard pairs raise ValueError.
+    """
 
     config = (
         EnigmaConfigBuilder()

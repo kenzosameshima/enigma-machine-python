@@ -107,7 +107,13 @@ def mode_strategy_for(mode: MachineModeName | str | MachineMode) -> MachineMode:
     if isinstance(mode, MachineModeName):
         normalized = mode
     else:
-        normalized = MachineModeName(str(mode).lower())
+        try:
+            normalized = MachineModeName(str(mode).lower())
+        except ValueError as exc:
+            supported = ", ".join(sorted(item.value for item in MachineModeName))
+            raise ValueError(
+                f"Unsupported machine mode: {mode}. Supported modes: {supported}"
+            ) from exc
 
     strategies = {
         MachineModeName.WEHRMACHT: ThreeRotorMode(MachineModeName.WEHRMACHT),
