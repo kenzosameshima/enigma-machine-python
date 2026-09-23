@@ -38,6 +38,7 @@ class EnigmaFactory:
             reflector_name=config.reflector_name,
             plugboard=Plugboard(config.plugboard_pairs),
             observer=observer,
+            copy_rotors=False,
         )
 
     def _create_m4(
@@ -51,6 +52,7 @@ class EnigmaFactory:
             plugboard=Plugboard(config.plugboard_pairs),
             greek_rotor=self._create_greek_rotor(config),
             observer=observer,
+            copy_rotors=False,
         )
 
     @staticmethod
