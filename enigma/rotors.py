@@ -62,9 +62,16 @@ class Rotor:
         return self.state.position
 
     def at_notch(self) -> bool:
-        """Return whether this rotor is currently at its turnover notch."""
+        """Return whether this rotor is currently at its turnover notch.
 
-        return (self.position + self.ring) % 26 in self.notches
+        The notch is machined into the alphabet ring, which also carries the
+        window letter, so turnover always happens at the same window letter
+        regardless of ring setting. The ring setting only offsets the wiring
+        core relative to the ring (see encode_forward/encode_backward), it
+        does not move the notch relative to the window.
+        """
+
+        return self.position in self.notches
 
     def get_position_letter(self) -> str:
         """Return the current window letter."""

@@ -180,6 +180,26 @@ def test_should_step_rotors_documents_double_step_decisions() -> None:
     )
 
 
+def test_turnover_notch_is_independent_of_ring_setting() -> None:
+    """Turnover happens at a fixed window letter regardless of ring setting.
+
+    Rotor III's notch is at window letter V. With ring setting 2 the old,
+    buggy formula ((position + ring) % 26 in notches) would treat window
+    letter U as the notch instead, triggering the middle rotor's step one
+    keystroke early.
+    """
+
+    machine = make_machine(
+        key="AAU",
+        rotor_order=("I", "II", "III"),
+        ring_settings=(1, 1, 2),
+    )
+
+    machine.process_char("A")
+
+    assert machine.window() == "AAV"
+
+
 def test_process_char_uses_existing_advanced_rotor_positions() -> None:
     machine = make_machine(key="AAB")
     expected_machine = make_machine(key="AAC")
