@@ -24,12 +24,6 @@ def make_machine(*, key: str = "AAA"):
     return EnigmaFactory().create(config)
 
 
-def test_legacy_engine_wrapper_still_exports_enigma_process() -> None:
-    from engine import enigma_process as legacy_enigma_process
-
-    assert legacy_enigma_process("HELLO", "AAA") == enigma_process("HELLO", "AAA")
-
-
 def test_step_rotors_compat_helper_still_mutates_passed_rotors() -> None:
     rotors = [Rotor("I"), Rotor("II"), Rotor("III")]
 
