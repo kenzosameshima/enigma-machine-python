@@ -12,10 +12,6 @@ The package keeps the project split into clear layers:
 configuration -> construction -> machine execution -> interface
 ```
 
-The root-level `engine.py`, `cli.py`, and `config.py` modules remain as
-compatibility wrappers for older imports. New code should prefer imports from
-the `enigma` package.
-
 ## Installation
 
 Use Python 3.10 or newer.
@@ -54,11 +50,10 @@ Run the interactive CLI from the project root:
 python3 -m enigma.cli
 ```
 
-The compatibility entry points also work:
+Or, once installed (`pip install -e .`), the console script:
 
 ```bash
-python3 main.py
-python3 cli.py
+enigma-machine
 ```
 
 Example session:
@@ -131,12 +126,6 @@ machine = EnigmaFactory().create(config)
 ciphertext = machine.process_text(config.text)
 ```
 
-Older imports are still supported:
-
-```python
-from engine import enigma_process
-```
-
 ## Public API Contract
 
 The supported public API is:
@@ -149,10 +138,6 @@ The supported public API is:
 - `enigma.ReflectorName`
 - `enigma.Plugboard`
 - `enigma.Rotor`, `enigma.RotorSpec`, and `enigma.RotorState`
-
-Root-level `engine.py`, `cli.py`, and `config.py` are compatibility wrappers for
-legacy imports. They remain supported, but new code should import from
-`enigma`.
 
 `enigma_process()` is the preferred high-level API. It builds a fresh machine for
 each call, normalizes input text to uppercase, preserves spaces, punctuation, and
@@ -260,6 +245,55 @@ The three moving rotors follow the classic stepping behavior:
 - If the middle rotor is at its turnover notch, both the middle and left rotors
   step. This is the classic double-step behavior.
 - Non-alphabetic characters pass through unchanged and do not step any rotor.
+
+## Historical Accuracy: Ring Setting Does Not Move the Turnover Notch
+
+Turnover notches trigger at a fixed window letter (e.g. rotor III always
+turns over at `V`), regardless of ring setting. This is a common source of
+bugs in Enigma simulators, including an earlier version of this one, so it's
+documented here explicitly.
+
+The confusion is understandable: the ring setting (`Ringstellung`) genuinely
+does shift the *wiring* offset used during encoding (`Rotor.encode_forward`
+and `encode_backward` correctly apply `position - ring`), so it's a natural
+but incorrect assumption that the same offset should apply to notch
+detection. It shouldn't, because of where the notch physically lives. The
+alphabet ring — the part that both carries the turnover notch and shows the
+window letter — can be rotated relative to the internal wiring core (that
+rotation *is* the ring setting), but the notch and the window letter are
+fixed to each other on that same ring. Turning the ring setting knob moves
+the wiring relative to the notch; it never moves the notch relative to the
+window.
+
+An earlier version of `Rotor.at_notch()` incorrectly folded the ring setting
+into the turnover check:
+
+```python
+# Incorrect: couples turnover to ring setting
+return (self.position + self.ring) % 26 in self.notches
+```
+
+This meant any configuration using a non-default ring setting — the
+historically normal case, not the exception — would step the wrong rotor on
+the wrong keystroke, silently diverging from a real Enigma's keystream past
+the first turnover. It shipped unnoticed because the only ring-setting test
+vector in the suite (`ring_settings=(20, 13, 5)`, `HELLOWORLD`) happens not
+to trigger a turnover in ten characters, so the bug was inert in every
+existing test.
+
+It was caught by cross-checking the mechanical explanation against an
+independent implementation (`aylvisaker/python-enigma`, whose stepping check
+uses raw position with no ring term) and confirming the corrected formula:
+
+```python
+# Correct: turnover depends only on the window letter
+return self.position in self.notches
+```
+
+still passes the full existing suite, then adding a regression test with a
+non-default ring setting chosen specifically so the old and new formulas
+predict turnover on different keystrokes (`test_turnover_notch_is_independent_of_ring_setting`
+in `tests/test_machine.py`), closing the coverage gap that let it ship.
 
 ## Tests
 
