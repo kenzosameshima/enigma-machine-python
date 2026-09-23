@@ -6,7 +6,6 @@ from .alphabet import letter_to_index
 from .config import EnigmaConfig
 from .data import ROTOR_SPECS
 from .machine import EnigmaMachine
-from .observer import EnigmaObserver
 from .plugboard import Plugboard
 from .rotors import Rotor, RotorState
 
@@ -14,11 +13,7 @@ from .rotors import Rotor, RotorState
 class EnigmaFactory:
     """Centralized Enigma machine construction."""
 
-    def create(
-        self,
-        config: EnigmaConfig,
-        observer: EnigmaObserver | None = None,
-    ) -> EnigmaMachine:
+    def create(self, config: EnigmaConfig) -> EnigmaMachine:
         """Validate config and return a fresh machine with isolated rotor state."""
 
         config.mode_strategy.validate(config)
@@ -26,32 +21,22 @@ class EnigmaFactory:
             3: self._create_three_rotor,
             4: self._create_m4,
         }
-        return creators[config.mode_strategy.rotor_count()](config, observer)
+        return creators[config.mode_strategy.rotor_count()](config)
 
-    def _create_three_rotor(
-        self,
-        config: EnigmaConfig,
-        observer: EnigmaObserver | None = None,
-    ) -> EnigmaMachine:
+    def _create_three_rotor(self, config: EnigmaConfig) -> EnigmaMachine:
         return EnigmaMachine(
             rotors=self._create_moving_rotors(config),
             reflector_name=config.reflector_name,
             plugboard=Plugboard(config.plugboard_pairs),
-            observer=observer,
             copy_rotors=False,
         )
 
-    def _create_m4(
-        self,
-        config: EnigmaConfig,
-        observer: EnigmaObserver | None = None,
-    ) -> EnigmaMachine:
+    def _create_m4(self, config: EnigmaConfig) -> EnigmaMachine:
         return EnigmaMachine(
             rotors=self._create_moving_rotors(config),
             reflector_name=config.reflector_name,
             plugboard=Plugboard(config.plugboard_pairs),
             greek_rotor=self._create_greek_rotor(config),
-            observer=observer,
             copy_rotors=False,
         )
 

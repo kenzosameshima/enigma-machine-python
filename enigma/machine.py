@@ -12,7 +12,6 @@ from .alphabet import (
     letter_to_index,
 )
 from .data import REFLECTORS
-from .observer import EnigmaObserver
 from .plugboard import Plugboard
 from .rotors import Rotor, RotorState
 
@@ -31,7 +30,6 @@ class EnigmaMachine:
         reflector_name: str,
         plugboard: Plugboard,
         greek_rotor: Rotor | None = None,
-        observer: EnigmaObserver | None = None,
         *,
         copy_rotors: bool = True,
     ) -> None:
@@ -48,7 +46,6 @@ class EnigmaMachine:
             if copy_rotors and greek_rotor is not None
             else greek_rotor
         )
-        self.observer = observer
         self._initial_rotor_states = _snapshot_rotors(self.rotors)
         self._initial_greek_rotor_state = (
             _snapshot_rotor(self.greek_rotor) if self.greek_rotor is not None else None
@@ -72,15 +69,8 @@ class EnigmaMachine:
         if char not in BASE:
             return char
 
-        input_char = char
         self._step_rotors()
-        if self.observer:
-            self.observer.on_rotor_step(self.window())
-
-        output_char = self.encode_signal(char)
-        if self.observer:
-            self.observer.on_char_processed(input_char, output_char)
-        return output_char
+        return self.encode_signal(char)
 
     def encode_signal(self, char: str) -> str:
         """Encode one alphabetic character without stepping rotors."""
