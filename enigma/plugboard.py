@@ -30,7 +30,7 @@ class Plugboard:
             raise ValueError("Plugboard supports up to 10 pairs")
 
         for pair in pairs:
-            a, b = _normalize_pair(pair)
+            a, b = normalize_pair(pair)
             if a == b:
                 raise ValueError(f"Plugboard pair cannot repeat a letter: {a}-{b}")
             if a in mapping or b in mapping:
@@ -40,7 +40,7 @@ class Plugboard:
         return mapping
 
 
-def _normalize_pair(pair: object) -> tuple[str, str]:
+def normalize_pair(pair: object) -> tuple[str, str]:
     if not isinstance(pair, (list, tuple)) or len(pair) != 2:
         raise ValueError("Plugboard pair must contain exactly two letters")
 

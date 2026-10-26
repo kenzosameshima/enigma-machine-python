@@ -4,38 +4,26 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 
-from .alphabet import BASE, DEFAULT_RINGS, DEFAULT_ROTORS
-from .config import EnigmaConfigBuilder, parse_key_positions
+from .alphabet import DEFAULT_RINGS, DEFAULT_ROTORS
+from .config import EnigmaConfigBuilder
 from .factory import EnigmaFactory
 from .machine import EnigmaMachine
 from .modes import MachineModeName, ReflectorName
-from .plugboard import Plugboard, _normalize_pair
+from .plugboard import Plugboard, normalize_pair
 from .rotors import Rotor
 
 __all__ = [
     "enigma_process",
     "normalize_pairs",
-    "parse_key_positions",
-    "plugboard_swap",
-    "process_char",
     "step_rotors",
 ]
-
-
-def plugboard_swap(char: str, pairs: Sequence[tuple[str, str]]) -> str:
-    """Compatibility helper for callers that used the old function."""
-
-    return Plugboard(pairs).swap(char)
 
 
 def normalize_pairs(pairs: Sequence[tuple[str, str]]) -> tuple[tuple[str, str], ...]:
     """Validate and normalize plugboard pairs."""
 
     Plugboard(pairs)
-    normalized: list[tuple[str, str]] = []
-    for pair in pairs:
-        normalized.append(_normalize_pair(pair))
-    return tuple(normalized)
+    return tuple(normalize_pair(pair) for pair in pairs)
 
 
 def step_rotors(rotors: Sequence[Rotor]) -> None:
@@ -46,27 +34,7 @@ def step_rotors(rotors: Sequence[Rotor]) -> None:
         ReflectorName.B.value,
         Plugboard(),
         copy_rotors=False,
-    )._step_rotors()
-
-
-def process_char(
-    char: str,
-    moving_rotors: Sequence[Rotor],
-    reflector_name: str,
-    greek_rotor: Rotor | None = None,
-    plug_pairs: Sequence[tuple[str, str]] | None = None,
-) -> str:
-    """Compatibility helper for processing through existing rotor objects."""
-
-    machine = EnigmaMachine(
-        moving_rotors,
-        reflector_name,
-        Plugboard(plug_pairs or ()),
-        greek_rotor,
-    )
-    if char not in BASE:
-        return char
-    return machine.encode_signal(char)
+    ).step_rotors()
 
 
 def enigma_process(

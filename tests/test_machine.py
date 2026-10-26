@@ -3,12 +3,12 @@
 from __future__ import annotations
 
 import pytest
+from helpers import make_rotor
 
 from enigma import EnigmaConfigBuilder, EnigmaFactory
 from enigma.machine import EnigmaMachine, _should_step_rotors
 from enigma.modes import MachineModeName
 from enigma.plugboard import Plugboard
-from enigma.rotors import Rotor
 
 
 def make_machine(
@@ -61,7 +61,7 @@ def test_machine_reset_restores_initial_rotor_state() -> None:
 
 
 def test_machine_clones_rotor_state_from_reused_rotor_objects() -> None:
-    shared_rotors = [Rotor("I"), Rotor("II"), Rotor("III")]
+    shared_rotors = [make_rotor("I"), make_rotor("II"), make_rotor("III")]
     first_machine = EnigmaMachine(shared_rotors, "B", Plugboard())
     second_machine = EnigmaMachine(shared_rotors, "B", Plugboard())
     expected = make_machine(key="AAA").process_text("AAAA")
@@ -73,40 +73,46 @@ def test_machine_clones_rotor_state_from_reused_rotor_objects() -> None:
 
 def test_machine_rejects_incorrect_moving_rotor_count() -> None:
     with pytest.raises(ValueError, match="exactly 3 moving rotors"):
-        EnigmaMachine([Rotor("I"), Rotor("II")], "B", Plugboard())
+        EnigmaMachine([make_rotor("I"), make_rotor("II")], "B", Plugboard())
 
 
 def test_machine_rejects_non_moving_rotor_in_moving_slots() -> None:
     with pytest.raises(ValueError, match="Moving rotors"):
-        EnigmaMachine([Rotor("I"), Rotor("II"), Rotor("BETA")], "B", Plugboard())
+        EnigmaMachine(
+            [make_rotor("I"), make_rotor("II"), make_rotor("BETA")], "B", Plugboard()
+        )
 
 
 def test_machine_rejects_duplicate_moving_rotors() -> None:
     with pytest.raises(ValueError, match="unique"):
-        EnigmaMachine([Rotor("I"), Rotor("II"), Rotor("II")], "B", Plugboard())
+        EnigmaMachine(
+            [make_rotor("I"), make_rotor("II"), make_rotor("II")], "B", Plugboard()
+        )
 
 
 def test_machine_rejects_unknown_reflector() -> None:
     with pytest.raises(ValueError, match="Unknown reflector"):
-        EnigmaMachine([Rotor("I"), Rotor("II"), Rotor("III")], "D", Plugboard())
+        EnigmaMachine(
+            [make_rotor("I"), make_rotor("II"), make_rotor("III")], "D", Plugboard()
+        )
 
 
 def test_machine_rejects_invalid_greek_rotor() -> None:
     with pytest.raises(ValueError, match="Greek rotor"):
         EnigmaMachine(
-            [Rotor("I"), Rotor("II"), Rotor("III")],
+            [make_rotor("I"), make_rotor("II"), make_rotor("III")],
             "B",
             Plugboard(),
-            greek_rotor=Rotor("I", can_step=False),
+            greek_rotor=make_rotor("I", can_step=False),
         )
 
 
 def test_machine_accepts_valid_non_stepping_greek_rotor() -> None:
     machine = EnigmaMachine(
-        [Rotor("I"), Rotor("II"), Rotor("III")],
+        [make_rotor("I"), make_rotor("II"), make_rotor("III")],
         "B_THIN",
         Plugboard(),
-        greek_rotor=Rotor("BETA", can_step=False),
+        greek_rotor=make_rotor("BETA", can_step=False),
     )
 
     assert machine.window() == "AAA A"

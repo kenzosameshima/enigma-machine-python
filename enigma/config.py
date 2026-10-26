@@ -16,6 +16,7 @@ from .alphabet import (
 )
 from .data import REFLECTORS, ROTOR_SPECS
 from .modes import (
+    GreekRotorName,
     MachineMode,
     MachineModeName,
     ReflectorName,
@@ -25,15 +26,6 @@ from .modes import (
 from .plugboard import Plugboard
 
 T = TypeVar("T")
-
-
-def parse_key_positions(key: str, rotor_count: int) -> str:
-    """Keep valid letters and pad missing positions with A."""
-
-    normalized = "".join(ch for ch in key.upper() if is_base_letter(ch))
-    if len(normalized) < rotor_count:
-        normalized = (normalized + ("A" * rotor_count))[:rotor_count]
-    return normalized[:rotor_count]
 
 
 def _normalize_key_positions(key: str, rotor_count: int) -> str:
@@ -56,6 +48,14 @@ def _normalize_reflector_name(name: str | ReflectorName) -> str:
         return name.value
     if not isinstance(name, str):
         raise ValueError("Reflector name must be text")
+    return name.strip().upper()
+
+
+def _normalize_greek_rotor(name: str | GreekRotorName) -> str:
+    if isinstance(name, GreekRotorName):
+        return name.value
+    if not isinstance(name, str):
+        raise ValueError("Greek rotor must be text")
     return name.strip().upper()
 
 
@@ -127,7 +127,9 @@ class EnigmaConfig:
         object.__setattr__(
             self, "reflector_name", _normalize_reflector_name(self.reflector_name)
         )
-        object.__setattr__(self, "greek_rotor", _normalize_rotor_name(self.greek_rotor))
+        object.__setattr__(
+            self, "greek_rotor", _normalize_greek_rotor(self.greek_rotor)
+        )
         object.__setattr__(
             self,
             "plugboard_pairs",
@@ -150,7 +152,7 @@ class EnigmaConfigBuilder:
         self._key = DEFAULT_POSITIONS
         self._reflector_name: str | ReflectorName = ReflectorName.B
         self._plugboard_pairs: Sequence[tuple[str, str]] = ()
-        self._greek_rotor = "BETA"
+        self._greek_rotor: str | GreekRotorName = GreekRotorName.BETA
 
     def text(self, value: str) -> EnigmaConfigBuilder:
         """Set input text. Text is normalized to uppercase during build."""
@@ -194,7 +196,7 @@ class EnigmaConfigBuilder:
         self._plugboard_pairs = pairs or ()
         return self
 
-    def greek(self, value: str) -> EnigmaConfigBuilder:
+    def greek(self, value: str | GreekRotorName) -> EnigmaConfigBuilder:
         """Set the fixed Greek rotor used by M4 mode."""
 
         self._greek_rotor = value

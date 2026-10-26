@@ -6,6 +6,8 @@ from abc import ABC, abstractmethod
 from enum import Enum
 from typing import TYPE_CHECKING
 
+from .alphabet import GREEK_ROTORS
+
 if TYPE_CHECKING:
     from .config import EnigmaConfig
 
@@ -25,6 +27,13 @@ class ReflectorName(str, Enum):
     C = "C"
     B_THIN = "B_THIN"
     C_THIN = "C_THIN"
+
+
+class GreekRotorName(str, Enum):
+    """Supported Greek rotors for M4 mode."""
+
+    BETA = "BETA"
+    GAMMA = "GAMMA"
 
 
 THREE_ROTOR_REFLECTORS = frozenset({ReflectorName.B.value, ReflectorName.C.value})
@@ -78,8 +87,6 @@ class M4Mode(MachineMode):
     name = MachineModeName.M4
 
     def validate(self, config: EnigmaConfig) -> None:
-        from .alphabet import GREEK_ROTORS
-
         if len(config.rotor_order) != self.moving_rotor_count():
             raise ValueError("M4 requires 3 moving rotor names")
         if len(config.ring_settings) != self.rotor_count():

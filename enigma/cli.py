@@ -5,15 +5,13 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from collections.abc import Sequence
 
-from .alphabet import is_base_letter
+from .alphabet import DEFAULT_ROTORS, MOVING_ROTORS, is_base_letter
 from .config import EnigmaConfig, EnigmaConfigBuilder
 from .engine import normalize_pairs
 from .factory import EnigmaFactory
 from .modes import MachineModeName, ReflectorName
 
 MAX_MESSAGE_LENGTH = 128
-DEFAULT_ROTOR_ORDER = ("I", "II", "III")
-MOVING_ROTORS = {"I", "II", "III", "IV", "V"}
 
 
 def prompt_rotor_order() -> tuple[str, str, str]:
@@ -23,7 +21,7 @@ def prompt_rotor_order() -> tuple[str, str, str]:
 
     if not parts:
         print("Using default rotor order I II III.")
-        return DEFAULT_ROTOR_ORDER
+        return DEFAULT_ROTORS
     if len(parts) != 3:
         raise ValueError("Rotor order must contain exactly 3 moving rotors")
     if any(part not in MOVING_ROTORS for part in parts):
@@ -134,6 +132,42 @@ class CliCommand(ABC):
             .build()
         )
 
+    def _round_trip(
+        self,
+        text: str,
+        key: str,
+        mode: MachineModeName,
+        rotor_order: Sequence[str],
+        ring_settings: Sequence[int],
+        reflector_name: str,
+        plug_pairs: Sequence[tuple[str, str]],
+        greek_rotor_name: str = "BETA",
+    ) -> tuple[str, str, str]:
+        """Encrypt and decrypt with the same initial machine settings."""
+        config = self._build_config(
+            text=text,
+            key=key,
+            mode=mode,
+            rotor_order=rotor_order,
+            ring_settings=ring_settings,
+            reflector_name=reflector_name,
+            plug_pairs=plug_pairs,
+            greek_rotor_name=greek_rotor_name,
+        )
+        window, encrypted = process_config(config)
+        decrypt_config = self._build_config(
+            text=encrypted,
+            key=key,
+            mode=mode,
+            rotor_order=rotor_order,
+            ring_settings=ring_settings,
+            reflector_name=reflector_name,
+            plug_pairs=plug_pairs,
+            greek_rotor_name=greek_rotor_name,
+        )
+        _, decrypted = process_config(decrypt_config)
+        return window, encrypted, decrypted
+
 
 class ThreeRotorCommand(CliCommand):
     """CLI command for Wehrmacht/Naval three-rotor modes."""
@@ -158,7 +192,7 @@ class ThreeRotorCommand(CliCommand):
         )
         plug_pairs = prompt_plugboard()
 
-        config = self._build_config(
+        window, encrypted, decrypted = self._round_trip(
             text=text,
             key=key,
             mode=self.mode,
@@ -167,17 +201,6 @@ class ThreeRotorCommand(CliCommand):
             reflector_name=reflector_name,
             plug_pairs=plug_pairs,
         )
-        window, encrypted = process_config(config)
-        decrypt_config = self._build_config(
-            text=encrypted,
-            key=key,
-            mode=self.mode,
-            rotor_order=rotor_order,
-            ring_settings=ring_settings,
-            reflector_name=reflector_name,
-            plug_pairs=plug_pairs,
-        )
-        _, decrypted = process_config(decrypt_config)
         return (
             f"\nRotor window: [{window}]\n"
             f"Encrypted:  {encrypted}\n"
@@ -201,7 +224,7 @@ class M4Command(CliCommand):
         )
         plug_pairs = prompt_plugboard()
 
-        config = self._build_config(
+        window, encrypted, decrypted = self._round_trip(
             text=text,
             key=key,
             mode=MachineModeName.M4,
@@ -211,18 +234,6 @@ class M4Command(CliCommand):
             plug_pairs=plug_pairs,
             greek_rotor_name=greek_rotor_name,
         )
-        window, encrypted = process_config(config)
-        decrypt_config = self._build_config(
-            text=encrypted,
-            key=key,
-            mode=MachineModeName.M4,
-            rotor_order=rotor_order,
-            ring_settings=ring_settings,
-            reflector_name=reflector_name,
-            plug_pairs=plug_pairs,
-            greek_rotor_name=greek_rotor_name,
-        )
-        _, decrypted = process_config(decrypt_config)
         return (
             f"\nRotor window: [{window}]\n"
             f"Encrypted:  {encrypted}\n"
@@ -270,7 +281,7 @@ class DailyKeySheetCommand(CliCommand):
         if not text:
             return "No message entered."
 
-        encrypt_config = self._build_config(
+        _, encrypted, decrypted = self._round_trip(
             text=text,
             key=message_key,
             mode=MachineModeName.WEHRMACHT,
@@ -279,18 +290,6 @@ class DailyKeySheetCommand(CliCommand):
             reflector_name=reflector_name,
             plug_pairs=plug_pairs,
         )
-        _, encrypted = process_config(encrypt_config)
-
-        decrypt_config = self._build_config(
-            text=encrypted,
-            key=message_key,
-            mode=MachineModeName.WEHRMACHT,
-            rotor_order=rotor_order,
-            ring_settings=ring_settings,
-            reflector_name=reflector_name,
-            plug_pairs=plug_pairs,
-        )
-        _, decrypted = process_config(decrypt_config)
 
         return (
             f"Rotor order: {' '.join(rotor_order)}\n"

@@ -69,7 +69,7 @@ class EnigmaMachine:
         if char not in BASE:
             return char
 
-        self._step_rotors()
+        self.step_rotors()
         return self.encode_signal(char)
 
     def encode_signal(self, char: str) -> str:
@@ -105,7 +105,9 @@ class EnigmaMachine:
     def _reflect(self, index: int) -> int:
         return letter_to_index(REFLECTORS[self.reflector_name][index])
 
-    def _step_rotors(self) -> None:
+    def step_rotors(self) -> None:
+        """Advance the moving rotors by one keystroke without encoding a character."""
+
         left, middle, right = self.rotors
         step_left, step_middle, step_right = _should_step_rotors(
             middle_at_notch=middle.at_notch(),

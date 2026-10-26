@@ -5,27 +5,14 @@ from __future__ import annotations
 import unittest
 
 import pytest
+from helpers import make_rotor
 
-from enigma import EnigmaConfigBuilder, EnigmaFactory, enigma_process
-from enigma.engine import process_char, step_rotors
-from enigma.rotors import Rotor
-
-
-def make_machine(*, key: str = "AAA"):
-    config = (
-        EnigmaConfigBuilder()
-        .text("")
-        .rotors("I", "II", "III")
-        .rings(1, 1, 1)
-        .key(key)
-        .reflector("B")
-        .build()
-    )
-    return EnigmaFactory().create(config)
+from enigma import enigma_process
+from enigma.engine import step_rotors
 
 
 def test_step_rotors_compat_helper_still_mutates_passed_rotors() -> None:
-    rotors = [Rotor("I"), Rotor("II"), Rotor("III")]
+    rotors = [make_rotor("I"), make_rotor("II"), make_rotor("III")]
 
     step_rotors(rotors)
 
@@ -34,13 +21,7 @@ def test_step_rotors_compat_helper_still_mutates_passed_rotors() -> None:
 
 def test_step_rotors_rejects_incorrect_moving_rotor_count() -> None:
     with pytest.raises(ValueError, match="exactly 3 moving rotors"):
-        step_rotors([Rotor("I"), Rotor("II")])
-
-
-def test_compat_process_char_encodes_without_stepping_existing_rotors() -> None:
-    machine = make_machine(key="AAC")
-
-    assert process_char("A", machine.rotors, "B") == machine.encode_signal("A")
+        step_rotors([make_rotor("I"), make_rotor("II")])
 
 
 class UnittestCompatibilityTests(unittest.TestCase):

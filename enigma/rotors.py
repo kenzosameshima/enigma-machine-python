@@ -29,23 +29,13 @@ class Rotor:
 
     def __init__(
         self,
-        spec: RotorSpec | str,
+        spec: RotorSpec,
         state: RotorState | None = None,
         can_step: bool = True,
-        ring_setting: int = 1,
-        position: str = "A",
     ) -> None:
-        if isinstance(spec, str):
-            from .data import ROTOR_SPECS
-
-            spec = ROTOR_SPECS[spec]
-
         self.spec = spec
         self.name = self.spec.name
-        self.state = state or RotorState(
-            ring=ring_setting - 1,
-            position=letter_to_index(position),
-        )
+        self.state = state or RotorState(ring=0, position=0)
         self.can_step = can_step
         self.wiring = [letter_to_index(char) for char in self.spec.wiring]
         self.inverse_wiring = [0] * 26
