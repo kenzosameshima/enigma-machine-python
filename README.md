@@ -75,6 +75,26 @@ Reflector (B/C, default B): B
 Plugboard pairs (e.g. AB CD EF), blank for none: AB CD
 ```
 
+### Daily Key Sheet Mode
+
+Option `0` simulates the historical two-stage daily key procedure instead of
+encrypting a message directly:
+
+1. **Daily settings** (shared by every message sent that day): rotor order,
+   ring settings, reflector, and plugboard pairs.
+2. **Ground setting**: a 3-letter starting position. The sending operator sets
+   the rotors here before enciphering their chosen message key.
+3. **Encrypted message key**: a 3-letter value the sending operator transmits
+   ahead of the message. Starting from the ground setting, decrypting it
+   recovers the plaintext message key.
+4. The recovered message key becomes the starting position for the message
+   itself: the plaintext is encrypted from that position, and the report
+   decrypts the ciphertext back from the same position to show the round
+   trip succeeds.
+
+The command reports the daily settings, the decrypted message key, and the
+plaintext/ciphertext/decrypted message, in that order.
+
 ## Programmatic Usage
 
 Preferred import:
@@ -136,6 +156,7 @@ The supported public API is:
 - `enigma.EnigmaFactory`
 - `enigma.MachineModeName`
 - `enigma.ReflectorName`
+- `enigma.GreekRotorName`
 - `enigma.Plugboard`
 - `enigma.Rotor`, `enigma.RotorSpec`, and `enigma.RotorState`
 

@@ -15,7 +15,6 @@
 - Added `RotorSpec` and `RotorState` to separate immutable rotor definitions
   from mutable rotor state.
 - Added automated regression tests under `tests/`.
-- Added compatibility wrappers for older root-level imports.
 - Added GitHub Actions CI for Python 3.10, 3.11, 3.12, and 3.13.
 - Added coverage tooling with an initial 80% threshold.
 - Added Enigma I reference-vector tests.
@@ -41,6 +40,12 @@
 - Removed engine-side printing. Core logic now returns values or raises
   exceptions.
 - Eliminated duplicated machine construction between CLI and engine paths.
+- Made the turnover notch independent of ring setting, so turnover happens at
+  a fixed window letter as on a real Enigma machine.
+- Ordered the Greek rotor last in `EnigmaMachine.window()` so its output
+  matches `EnigmaConfig.positions`/`.key()` and round-trips correctly for M4.
+- Made `EnigmaConfig` validate and normalize fields identically whether
+  constructed directly or through `EnigmaConfigBuilder`.
 
 ### Notes
 
