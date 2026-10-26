@@ -4,7 +4,13 @@ from __future__ import annotations
 
 import pytest
 
-from enigma import EnigmaConfigBuilder, EnigmaFactory, enigma_process
+from enigma import (
+    EnigmaConfig,
+    EnigmaConfigBuilder,
+    EnigmaFactory,
+    MachineModeName,
+    enigma_process,
+)
 
 
 def make_machine(
@@ -99,3 +105,41 @@ def test_builder_creates_machine_with_expected_window() -> None:
     machine = make_machine(text="HELLO", key="ABC")
 
     assert machine.window() == "ABC"
+
+
+def test_direct_config_rejects_mode_mode_strategy_mismatch() -> None:
+    with pytest.raises(ValueError, match="does not match mode_strategy"):
+        EnigmaConfig(
+            text="",
+            mode=MachineModeName.M4,
+            rotor_order=("I", "II", "III"),
+            ring_settings=(1, 1, 1),
+            positions="AAA",
+            reflector_name="B",
+        )
+
+
+def test_direct_config_normalizes_mutable_containers_to_hashable_tuples() -> None:
+    config = EnigmaConfig(
+        text="HELLO",
+        mode=MachineModeName.WEHRMACHT,
+        rotor_order=["I", "II", "III"],  # type: ignore[arg-type]
+        ring_settings=(1, 1, 1),
+        positions="AAA",
+        reflector_name="B",
+    )
+
+    assert config.rotor_order == ("I", "II", "III")
+    hash(config)
+
+
+def test_direct_config_rejects_non_string_text() -> None:
+    with pytest.raises(ValueError, match="Text must be a string"):
+        EnigmaConfig(
+            text=None,  # type: ignore[arg-type]
+            mode=MachineModeName.WEHRMACHT,
+            rotor_order=("I", "II", "III"),
+            ring_settings=(1, 1, 1),
+            positions="AAA",
+            reflector_name="B",
+        )

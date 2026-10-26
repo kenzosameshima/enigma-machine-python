@@ -78,6 +78,13 @@ def _validate_ring_settings(ring_settings: Sequence[int]) -> tuple[int, ...]:
     return normalized
 
 
+def _validate_reflector_and_greek(config: EnigmaConfig) -> None:
+    if config.reflector_name not in REFLECTORS:
+        raise ValueError(f"Unknown reflector: {config.reflector_name}")
+    if config.greek_rotor not in ROTOR_SPECS:
+        raise ValueError(f"Unknown Greek rotor: {config.greek_rotor}")
+
+
 @dataclass(frozen=True)
 class EnigmaConfig:
     """Complete machine configuration."""
@@ -91,6 +98,45 @@ class EnigmaConfig:
     plugboard_pairs: tuple[tuple[str, str], ...] = field(default_factory=tuple)
     greek_rotor: str = "BETA"
     mode_strategy: MachineMode = field(default_factory=ThreeRotorMode)
+
+    def __post_init__(self) -> None:
+        """Validate and normalize fields identically for every construction path."""
+
+        if not isinstance(self.text, str):
+            raise ValueError("Text must be a string")
+
+        strategy = self.mode_strategy
+        if not isinstance(strategy, MachineMode):
+            raise ValueError("mode_strategy must be a MachineMode instance")
+        if strategy.name != self.mode:
+            raise ValueError(
+                f"mode {self.mode!r} does not match mode_strategy {strategy.name!r}"
+            )
+
+        object.__setattr__(
+            self, "rotor_order", _validate_moving_rotors(self.rotor_order)
+        )
+        object.__setattr__(
+            self, "ring_settings", _validate_ring_settings(self.ring_settings)
+        )
+        object.__setattr__(
+            self,
+            "positions",
+            _normalize_key_positions(self.positions, strategy.rotor_count()),
+        )
+        object.__setattr__(
+            self, "reflector_name", _normalize_reflector_name(self.reflector_name)
+        )
+        object.__setattr__(self, "greek_rotor", _normalize_rotor_name(self.greek_rotor))
+        object.__setattr__(
+            self,
+            "plugboard_pairs",
+            tuple(tuple(pair) for pair in self.plugboard_pairs),
+        )
+
+        _validate_reflector_and_greek(self)
+        strategy.validate(self)
+        Plugboard(self.plugboard_pairs)
 
 
 class EnigmaConfigBuilder:
@@ -164,21 +210,17 @@ class EnigmaConfigBuilder:
                 DEFAULT_M4_RINGS if strategy.rotor_count() == 4 else DEFAULT_RINGS
             )
 
-        config = EnigmaConfig(
+        return EnigmaConfig(
             text=self._text.upper(),
             mode=strategy.name,
-            rotor_order=_validate_moving_rotors(self._rotor_order),
-            ring_settings=_validate_ring_settings(ring_settings),
-            positions=_normalize_key_positions(self._key, strategy.rotor_count()),
-            reflector_name=_normalize_reflector_name(self._reflector_name),
+            rotor_order=tuple(self._rotor_order),
+            ring_settings=tuple(ring_settings),
+            positions=self._key,
+            reflector_name=self._reflector_name,
             plugboard_pairs=tuple(self._plugboard_pairs),
-            greek_rotor=_normalize_rotor_name(self._greek_rotor),
+            greek_rotor=self._greek_rotor,
             mode_strategy=strategy,
         )
-        self._validate_common(config)
-        strategy.validate(config)
-        Plugboard(config.plugboard_pairs)
-        return config
 
     @staticmethod
     def _unpack_sequence(values: Iterable[T | Sequence[T]]) -> Sequence[T]:
@@ -186,10 +228,3 @@ class EnigmaConfigBuilder:
         if len(values) == 1 and isinstance(values[0], (list, tuple)):
             return cast(Sequence[T], values[0])
         return cast(tuple[T, ...], values)
-
-    @staticmethod
-    def _validate_common(config: EnigmaConfig) -> None:
-        if config.reflector_name not in REFLECTORS:
-            raise ValueError(f"Unknown reflector: {config.reflector_name}")
-        if config.greek_rotor not in ROTOR_SPECS:
-            raise ValueError(f"Unknown Greek rotor: {config.greek_rotor}")
