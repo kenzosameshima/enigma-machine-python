@@ -11,8 +11,8 @@ from .alphabet import (
     DEFAULT_POSITIONS,
     DEFAULT_RINGS,
     DEFAULT_ROTORS,
-    MOVING_ROTORS,
     is_base_letter,
+    validate_moving_rotor_names,
 )
 from .data import REFLECTORS, ROTOR_SPECS
 from .modes import (
@@ -61,10 +61,7 @@ def _normalize_greek_rotor(name: str | GreekRotorName) -> str:
 
 def _validate_moving_rotors(rotor_order: Sequence[str]) -> tuple[str, ...]:
     normalized = tuple(_normalize_rotor_name(name) for name in rotor_order)
-    if any(name not in MOVING_ROTORS for name in normalized):
-        raise ValueError("Moving rotors must be selected from I, II, III, IV, V")
-    if len(set(normalized)) != len(normalized):
-        raise ValueError("Moving rotors must be unique")
+    validate_moving_rotor_names(normalized)
     return normalized
 
 
@@ -90,7 +87,6 @@ class EnigmaConfig:
     """Complete machine configuration."""
 
     text: str
-    mode: MachineModeName
     rotor_order: tuple[str, ...]
     ring_settings: tuple[int, ...]
     positions: str
@@ -98,6 +94,12 @@ class EnigmaConfig:
     plugboard_pairs: tuple[tuple[str, str], ...] = field(default_factory=tuple)
     greek_rotor: str = "BETA"
     mode_strategy: MachineMode = field(default_factory=ThreeRotorMode)
+
+    @property
+    def mode(self) -> MachineModeName:
+        """The configured mode name, read from mode_strategy."""
+
+        return self.mode_strategy.name
 
     def __post_init__(self) -> None:
         """Validate and normalize fields identically for every construction path."""
@@ -108,10 +110,6 @@ class EnigmaConfig:
         strategy = self.mode_strategy
         if not isinstance(strategy, MachineMode):
             raise ValueError("mode_strategy must be a MachineMode instance")
-        if strategy.name != self.mode:
-            raise ValueError(
-                f"mode {self.mode!r} does not match mode_strategy {strategy.name!r}"
-            )
 
         object.__setattr__(
             self, "rotor_order", _validate_moving_rotors(self.rotor_order)
@@ -214,7 +212,6 @@ class EnigmaConfigBuilder:
 
         return EnigmaConfig(
             text=self._text.upper(),
-            mode=strategy.name,
             rotor_order=tuple(self._rotor_order),
             ring_settings=tuple(ring_settings),
             positions=self._key,

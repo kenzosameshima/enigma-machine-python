@@ -7,9 +7,9 @@ from collections.abc import Sequence
 from .alphabet import (
     BASE,
     GREEK_ROTORS,
-    MOVING_ROTORS,
     index_to_letter,
     letter_to_index,
+    validate_moving_rotor_names,
 )
 from .data import REFLECTORS
 from .plugboard import Plugboard
@@ -138,10 +138,7 @@ class EnigmaMachine:
             raise TypeError("EnigmaMachine rotors must be Rotor instances")
         if any(not rotor.can_step for rotor in rotors):
             raise ValueError("Moving rotors must be able to step")
-        if any(rotor.name not in MOVING_ROTORS for rotor in rotors):
-            raise ValueError("Moving rotors must be selected from I, II, III, IV, V")
-        if len({rotor.name for rotor in rotors}) != len(rotors):
-            raise ValueError("Moving rotors must be unique")
+        validate_moving_rotor_names([rotor.name for rotor in rotors])
         if reflector_name not in REFLECTORS:
             raise ValueError(f"Unknown reflector: {reflector_name}")
         if not isinstance(plugboard, Plugboard):
