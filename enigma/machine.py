@@ -95,11 +95,11 @@ class EnigmaMachine:
         return self.plugboard.swap(index_to_letter(index))
 
     def window(self) -> str:
-        """Return the current rotor window display."""
+        """Return the current rotor window display, Greek rotor last (matches key())."""
 
         window = "".join(rotor.get_position_letter() for rotor in self.rotors)
         if self.greek_rotor is not None:
-            return f"{self.greek_rotor.get_position_letter()} {window}"
+            return f"{window} {self.greek_rotor.get_position_letter()}"
         return window
 
     def _reflect(self, index: int) -> int:

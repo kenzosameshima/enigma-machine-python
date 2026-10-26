@@ -109,7 +109,7 @@ def test_machine_accepts_valid_non_stepping_greek_rotor() -> None:
         greek_rotor=Rotor("BETA", can_step=False),
     )
 
-    assert machine.window() == "A AAA"
+    assert machine.window() == "AAA A"
 
 
 def test_right_rotor_steps_for_each_alphabetic_character() -> None:
@@ -205,3 +205,21 @@ def test_process_char_uses_existing_advanced_rotor_positions() -> None:
     expected_machine = make_machine(key="AAC")
 
     assert machine.process_char("A") == expected_machine.encode_signal("A")
+
+
+def test_m4_window_round_trips_through_key() -> None:
+    machine = make_machine(
+        key="JNAV",
+        mode=MachineModeName.M4,
+        ring_settings=(1, 1, 1, 1),
+        reflector_name="B_THIN",
+    )
+
+    rebuilt = make_machine(
+        key=machine.window().replace(" ", ""),
+        mode=MachineModeName.M4,
+        ring_settings=(1, 1, 1, 1),
+        reflector_name="B_THIN",
+    )
+
+    assert rebuilt.window() == machine.window()
