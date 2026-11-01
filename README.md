@@ -348,14 +348,22 @@ python3 -m ruff check enigma tests
 python3 -m ruff format .
 ```
 
-Optional type checking:
+Type checking (strict):
 
 ```bash
 python3 -m mypy enigma
 ```
 
-GitHub Actions runs tests with coverage, Ruff, and mypy on Python 3.10, 3.11,
-3.12, and 3.13.
+GitHub Actions runs tests with coverage, Ruff (lint and format check), and
+mypy on Python 3.10, 3.11, 3.12, and 3.13.
+
+To catch Ruff's checks before committing, install the pinned pre-commit hooks
+once per clone:
+
+```bash
+pip install pre-commit
+pre-commit install
+```
 
 ## Release Preparation
 
