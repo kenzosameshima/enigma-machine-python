@@ -19,8 +19,8 @@ dev = [
     "mypy>=1.8",
     "hypothesis>=6.100",
     "pytest-randomly>=3.15",
-    "cosmic-ray==8.7.0",
 ]
+mutation = ["cosmic-ray==8.7.0"]
 
 [project.scripts]
 enigma-machine = "enigma.cli:main"

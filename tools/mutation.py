@@ -11,7 +11,7 @@ import sys
 from collections import Counter
 from pathlib import Path
 
-CORE = ("rotors", "machine", "plugboard", "config", "modes")
+CORE = ("rotors", "machine", "plugboard", "config", "modes", "alphabet")
 
 
 def main() -> None:
