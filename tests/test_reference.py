@@ -1,9 +1,27 @@
 """Published vectors and explicitly labeled independent-model comparisons."""
 
+from itertools import permutations
+
 import pytest
-from reference_enigma import reference_process
+from reference_enigma import TURNOVER, reference_process
 
 from enigma import enigma_process
+
+
+@pytest.mark.parametrize("order", list(permutations(("I", "II", "III", "IV", "V"), 3)))
+def test_every_order_against_independent_contacts(order: tuple[str, str, str]) -> None:
+    key = "A" + TURNOVER[order[1]] + TURNOVER[order[2]]
+    rings = (26, 13, 2)
+    text = "AZBYCXDW"
+    expected = reference_process(
+        text, order=order, windows=key, rings=rings, reflector="C"
+    )
+    assert (
+        enigma_process(
+            text, key, rotor_order=order, ring_settings=rings, reflector_name="C"
+        )
+        == expected
+    )
 
 
 # Published examples, including rings, plugboard, turnover and double-step:
