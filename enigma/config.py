@@ -39,7 +39,7 @@ def _normalize_key_positions(key: str, rotor_count: int) -> str:
 def _normalize_rotor_name(name: str) -> str:
     if not isinstance(name, str):
         raise ValueError("Rotor names must be text")
-    return name.strip().upper()
+    return ascii_upper(name.strip())
 
 
 def _normalize_reflector_name(name: str) -> str:
@@ -47,14 +47,14 @@ def _normalize_reflector_name(name: str) -> str:
     # normalizes correctly through the plain-string path below.
     if not isinstance(name, str):
         raise ValueError("Reflector name must be text")
-    return name.strip().upper()
+    return ascii_upper(name.strip())
 
 
 def _normalize_greek_rotor_name(name: str) -> str:
     # GreekRotorName is itself a str subclass; see _normalize_reflector_name.
     if not isinstance(name, str):
         raise ValueError("Greek rotor must be text")
-    return name.strip().upper()
+    return ascii_upper(name.strip())
 
 
 def _validate_moving_rotors(rotor_order: Sequence[str]) -> tuple[str, ...]:

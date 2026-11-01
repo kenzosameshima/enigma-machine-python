@@ -16,7 +16,9 @@ MAX_MESSAGE_LENGTH = 128
 
 def prompt_rotor_order() -> tuple[str, str, str]:
     print("Available moving rotors: I II III IV V")
-    raw = input("Enter rotor order left-to-right (e.g. I II III): ").strip().upper()
+    raw = ascii_upper(
+        input("Enter rotor order left-to-right (e.g. I II III): ").strip()
+    )
     parts = tuple(part for part in raw.replace(",", " ").split() if part)
 
     if not parts:
@@ -77,7 +79,7 @@ def prompt_reflector(
     default: ReflectorName,
     allowed: set[ReflectorName],
 ) -> str:
-    raw = input(prompt).strip().upper()
+    raw = ascii_upper(input(prompt).strip())
     reflector = raw or default.value
     if reflector not in {item.value for item in allowed}:
         raise ValueError(
@@ -88,7 +90,7 @@ def prompt_reflector(
 
 
 def prompt_greek_rotor() -> str:
-    raw = input("Greek rotor (BETA/GAMMA, default BETA): ").strip().upper()
+    raw = ascii_upper(input("Greek rotor (BETA/GAMMA, default BETA): ").strip())
     if not raw:
         return "BETA"
     if raw in {"BETA", "GAMMA"}:
