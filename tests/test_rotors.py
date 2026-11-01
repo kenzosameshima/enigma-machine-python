@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import pytest
 from helpers import make_rotor
 
 
@@ -47,3 +48,9 @@ def test_snapshot_and_restore_round_trip_state() -> None:
     rotor.restore(snapshot)
 
     assert rotor.get_position_letter() == "A"
+
+
+@pytest.mark.parametrize("name", ["I", "II", "III", "IV", "V", "BETA", "GAMMA"])
+def test_rotor_has_exactly_twenty_six_contacts_in_each_direction(name: str) -> None:
+    rotor = make_rotor(name)
+    assert len(rotor.wiring) == len(rotor.inverse_wiring) == 26
