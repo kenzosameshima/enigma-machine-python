@@ -26,3 +26,24 @@ def test_rotor_forward_backward_mapping_round_trips_indices() -> None:
 
     for index in range(26):
         assert rotor.encode_backward(rotor.encode_forward(index)) == index
+
+
+def test_clone_produces_independent_rotor_with_same_state() -> None:
+    rotor = make_rotor("I", ring_setting=5, position="C")
+    clone = rotor.clone()
+
+    clone.step()
+
+    assert clone.get_position_letter() == "D"
+    assert rotor.get_position_letter() == "C"
+
+
+def test_snapshot_and_restore_round_trip_state() -> None:
+    rotor = make_rotor("I")
+    snapshot = rotor.snapshot()
+
+    rotor.step()
+    rotor.step()
+    rotor.restore(snapshot)
+
+    assert rotor.get_position_letter() == "A"

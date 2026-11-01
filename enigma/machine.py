@@ -13,15 +13,14 @@ from .alphabet import (
 )
 from .data import REFLECTORS
 from .plugboard import Plugboard
-from .rotors import Rotor, RotorState
+from .rotors import Rotor
 
 
 class EnigmaMachine:
     """Executable Enigma machine with mutable rotor positions.
 
-    Direct construction defensively copies rotor objects by default so separate
-    machines cannot accidentally share stepping state. Pass copy_rotors=False
-    only for compatibility helpers that intentionally mutate external rotors.
+    Construction always clones the rotors passed in, so separate machines
+    never share stepping state, even when built from the same Rotor objects.
     """
 
     def __init__(
@@ -30,33 +29,24 @@ class EnigmaMachine:
         reflector_name: str,
         plugboard: Plugboard,
         greek_rotor: Rotor | None = None,
-        *,
-        copy_rotors: bool = True,
     ) -> None:
         self._validate_configuration(rotors, reflector_name, plugboard, greek_rotor)
-        self.rotors = (
-            [_clone_rotor(rotor) for rotor in rotors]
-            if copy_rotors
-            else list(rotors)
-        )
+        self.rotors = [rotor.clone() for rotor in rotors]
         self.reflector_name = reflector_name
         self.plugboard = plugboard
-        self.greek_rotor = (
-            _clone_rotor(greek_rotor)
-            if copy_rotors and greek_rotor is not None
-            else greek_rotor
-        )
-        self._initial_rotor_states = _snapshot_rotors(self.rotors)
+        self.greek_rotor = greek_rotor.clone() if greek_rotor is not None else None
+        self._initial_rotor_states = tuple(rotor.snapshot() for rotor in self.rotors)
         self._initial_greek_rotor_state = (
-            _snapshot_rotor(self.greek_rotor) if self.greek_rotor is not None else None
+            self.greek_rotor.snapshot() if self.greek_rotor is not None else None
         )
 
     def reset(self) -> None:
         """Restore the rotor windows and rings captured at construction time."""
 
-        _restore_rotors(self.rotors, self._initial_rotor_states)
+        for rotor, state in zip(self.rotors, self._initial_rotor_states, strict=True):
+            rotor.restore(state)
         if self.greek_rotor is not None and self._initial_greek_rotor_state is not None:
-            _restore_rotor(self.greek_rotor, self._initial_greek_rotor_state)
+            self.greek_rotor.restore(self._initial_greek_rotor_state)
 
     def process_text(self, text: str) -> str:
         """Process every character in text."""
@@ -164,32 +154,3 @@ def _should_step_rotors(
     step_middle = middle_at_notch or right_at_notch
     step_right = True
     return step_left, step_middle, step_right
-
-
-def _clone_rotor(rotor: Rotor) -> Rotor:
-    return Rotor(
-        rotor.spec,
-        RotorState(ring=rotor.ring, position=rotor.position),
-        can_step=rotor.can_step,
-    )
-
-
-def _snapshot_rotors(rotors: Sequence[Rotor]) -> tuple[tuple[int, int], ...]:
-    return tuple(_snapshot_rotor(rotor) for rotor in rotors)
-
-
-def _snapshot_rotor(rotor: Rotor) -> tuple[int, int]:
-    return rotor.ring, rotor.position
-
-
-def _restore_rotors(
-    rotors: Sequence[Rotor],
-    states: Sequence[tuple[int, int]],
-) -> None:
-    for rotor, state in zip(rotors, states, strict=True):
-        _restore_rotor(rotor, state)
-
-
-def _restore_rotor(rotor: Rotor, state: tuple[int, int]) -> None:
-    ring, position = state
-    rotor.state = RotorState(ring=ring, position=position)
