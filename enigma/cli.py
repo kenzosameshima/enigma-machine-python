@@ -5,7 +5,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from collections.abc import Sequence
 
-from .alphabet import DEFAULT_ROTORS, MOVING_ROTORS, is_base_letter
+from .alphabet import DEFAULT_ROTORS, MOVING_ROTORS, ascii_upper, is_base_letter
 from .config import EnigmaConfig
 from .machine import EnigmaMachine
 from .modes import MachineModeName, ReflectorName
@@ -54,7 +54,9 @@ def prompt_ring_settings(count: int) -> tuple[int, ...]:
 
 
 def prompt_plugboard() -> tuple[tuple[str, str], ...]:
-    raw = input("Plugboard pairs (e.g. AB CD EF), blank for none: ").strip().upper()
+    raw = ascii_upper(
+        input("Plugboard pairs (e.g. AB CD EF), blank for none: ").strip()
+    )
     if not raw:
         return ()
 
