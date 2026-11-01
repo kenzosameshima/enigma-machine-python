@@ -8,16 +8,18 @@ from enigma.plugboard import Plugboard, normalize_pairs
 
 
 @pytest.mark.parametrize(
-    "pairs",
+    ("pairs", "message"),
     [
-        [("A", "B"), ("A", "C")],
-        [("A", "A")],
-        [("A", "1")],
-        [("AB", "C")],
+        ([("A", "B"), ("A", "C")], "Plugboard letter already used: A-C"),
+        ([("A", "A")], "Plugboard pair cannot repeat a letter: A-A"),
+        ([("A", "1")], "Invalid plugboard pair: A-1"),
+        ([("AB", "C")], "Invalid plugboard pair: AB-C"),
     ],
 )
-def test_plugboard_rejects_invalid_pairs(pairs: list[tuple[str, str]]) -> None:
-    with pytest.raises(ValueError):
+def test_plugboard_rejects_invalid_pairs(
+    pairs: list[tuple[str, str]], message: str
+) -> None:
+    with pytest.raises(ValueError, match=message):
         Plugboard(pairs)
 
 
@@ -36,7 +38,7 @@ def test_plugboard_rejects_more_than_ten_pairs() -> None:
         ("U", "V"),
     ]
 
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="Plugboard supports up to 10 pairs"):
         Plugboard(pairs)
 
 
@@ -49,7 +51,7 @@ def test_normalize_pairs_preserves_order_and_does_not_dedupe() -> None:
 
 
 def test_normalize_pairs_rejects_repeated_letters() -> None:
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="Plugboard letter already used: B-C"):
         normalize_pairs([("a", "b"), ("B", "c")])
 
 

@@ -190,4 +190,4 @@ class UnittestCompatibilityTests(unittest.TestCase):
         encrypted = enigma_process("HELLO WORLD", "ABC")
         decrypted = enigma_process(encrypted, "ABC")
 
-        self.assertEqual(decrypted, "HELLO WORLD")
+        assert decrypted == "HELLO WORLD"
