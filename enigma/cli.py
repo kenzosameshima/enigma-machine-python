@@ -108,8 +108,9 @@ class CliCommand(ABC):
     def execute(self) -> str:
         """Collect input, run a machine, and return display text."""
 
-    def _build_config(
+    def _build_config(  # noqa: PLR0913 -- one named setting per Enigma config field
         self,
+        *,
         key: str,
         mode: MachineModeName,
         rotor_order: Sequence[str],
@@ -128,8 +129,9 @@ class CliCommand(ABC):
             mode=mode,
         )
 
-    def _round_trip(
+    def _round_trip(  # noqa: PLR0913 -- one named setting per Enigma config field
         self,
+        *,
         text: str,
         key: str,
         mode: MachineModeName,

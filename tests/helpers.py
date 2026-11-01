@@ -26,7 +26,7 @@ def make_rotor(
     )
 
 
-def make_machine(
+def make_machine(  # noqa: PLR0913 -- one named setting per Enigma config field
     *,
     key: str = "AAA",
     mode: MachineModeName | str = MachineModeName.WEHRMACHT,

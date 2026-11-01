@@ -12,7 +12,7 @@ from .modes import MachineModeName, ReflectorName, mode_name_for
 __all__ = ["enigma_process"]
 
 
-def enigma_process(
+def enigma_process(  # noqa: PLR0913, PLR0917 -- public signature, kept stable
     text: str,
     key: str,
     mode: str = MachineModeName.WEHRMACHT.value,
