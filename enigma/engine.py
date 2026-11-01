@@ -33,10 +33,10 @@ def enigma_process(
     config = EnigmaConfig(
         rotor_order=tuple(rotor_order),
         ring_settings=tuple(ring_settings),
-        positions=key,
+        key=key,
         reflector_name=reflector_name,
         plugboard_pairs=tuple(plug_pairs or ()),
-        greek_rotor=greek_rotor_name,
+        greek_rotor_name=greek_rotor_name,
         mode=mode_name_for(mode),
     )
     machine = EnigmaMachine.from_config(config)

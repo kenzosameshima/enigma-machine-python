@@ -20,10 +20,10 @@ def make_machine(
     config = EnigmaConfig(
         rotor_order=rotor_order,
         ring_settings=ring_settings,
-        positions=key,
+        key=key,
         reflector_name=reflector_name,
         plugboard_pairs=plug_pairs,
-        greek_rotor=greek_rotor_name,
+        greek_rotor_name=greek_rotor_name,
         mode=mode,
     )
     return EnigmaMachine.from_config(config)
@@ -112,7 +112,7 @@ def test_config_mode_defaults_to_wehrmacht() -> None:
     config = EnigmaConfig(
         rotor_order=("I", "II", "III"),
         ring_settings=(1, 1, 1),
-        positions="AAA",
+        key="AAA",
         reflector_name="B",
     )
 
@@ -123,7 +123,7 @@ def test_config_mode_accepts_explicit_value() -> None:
     config = EnigmaConfig(
         rotor_order=("I", "II", "III"),
         ring_settings=(1, 1, 1, 1),
-        positions="AAAA",
+        key="AAAA",
         reflector_name="B_THIN",
         mode=MachineModeName.M4,
     )
@@ -135,7 +135,7 @@ def test_direct_config_normalizes_mutable_containers_to_hashable_tuples() -> Non
     config = EnigmaConfig(
         rotor_order=["I", "II", "III"],  # type: ignore[arg-type]
         ring_settings=(1, 1, 1),
-        positions="AAA",
+        key="AAA",
         reflector_name="B",
     )
 

@@ -24,10 +24,10 @@ def make_machine(
     config = EnigmaConfig(
         rotor_order=rotor_order,
         ring_settings=ring_settings,
-        positions=key,
+        key=key,
         reflector_name=reflector_name,
         plugboard_pairs=plug_pairs,
-        greek_rotor=greek_rotor_name,
+        greek_rotor_name=greek_rotor_name,
         mode=mode,
     )
     return EnigmaMachine.from_config(config)

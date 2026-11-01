@@ -57,17 +57,17 @@ class EnigmaMachine:
             for name, ring, position in zip(
                 config.rotor_order,
                 config.ring_settings[:3],
-                config.positions[:3],
+                config.key[:3],
                 strict=True,
             )
         ]
         greek_rotor = None
         if MODE_SPECS[config.mode].requires_greek:
             greek_rotor = Rotor(
-                ROTOR_SPECS[config.greek_rotor],
+                ROTOR_SPECS[config.greek_rotor_name],
                 RotorState(
                     ring=config.ring_settings[3] - 1,
-                    position=letter_to_index(config.positions[3]),
+                    position=letter_to_index(config.key[3]),
                 ),
                 can_step=False,
             )

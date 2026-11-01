@@ -16,7 +16,6 @@ from .alphabet import (
 from .data import REFLECTORS
 from .modes import (
     MODE_SPECS,
-    GreekRotorName,
     MachineModeName,
     ReflectorName,
     mode_name_for,
@@ -40,17 +39,16 @@ def _normalize_rotor_name(name: str) -> str:
     return name.strip().upper()
 
 
-def _normalize_reflector_name(name: str | ReflectorName) -> str:
-    if isinstance(name, ReflectorName):
-        return name.value
+def _normalize_reflector_name(name: str) -> str:
+    # ReflectorName is itself a str subclass, so an enum member already
+    # normalizes correctly through the plain-string path below.
     if not isinstance(name, str):
         raise ValueError("Reflector name must be text")
     return name.strip().upper()
 
 
-def _normalize_greek_rotor(name: str | GreekRotorName) -> str:
-    if isinstance(name, GreekRotorName):
-        return name.value
+def _normalize_greek_rotor_name(name: str) -> str:
+    # GreekRotorName is itself a str subclass; see _normalize_reflector_name.
     if not isinstance(name, str):
         raise ValueError("Greek rotor must be text")
     return name.strip().upper()
@@ -82,26 +80,26 @@ def _validate_reflector_and_greek(config: EnigmaConfig) -> None:
 
     if config.reflector_name not in REFLECTORS:
         raise ValueError(f"Unknown reflector: {config.reflector_name}")
-    if config.greek_rotor not in GREEK_ROTORS:
-        raise ValueError(f"Unknown Greek rotor: {config.greek_rotor}")
+    if config.greek_rotor_name not in GREEK_ROTORS:
+        raise ValueError(f"Unknown Greek rotor: {config.greek_rotor_name}")
 
 
 @dataclass(frozen=True)
 class EnigmaConfig:
-    """Complete machine settings: rotors, rings, positions, reflector, plugboard.
+    """Complete machine settings: rotors, rings, key, reflector, plugboard.
 
     Validated once, in __post_init__, on every construction path. Defaults
     describe a default three-rotor machine; they are not adjusted for mode,
-    so e.g. mode="m4" without matching ring_settings/positions raises a
-    ValueError just as any other wrong count would.
+    so e.g. mode="m4" without matching ring_settings/key raises a ValueError
+    just as any other wrong count would.
     """
 
     rotor_order: tuple[str, ...] = DEFAULT_ROTORS
     ring_settings: tuple[int, ...] = DEFAULT_RINGS
-    positions: str = DEFAULT_POSITIONS
+    key: str = DEFAULT_POSITIONS
     reflector_name: str = ReflectorName.B.value
     plugboard_pairs: tuple[tuple[str, str], ...] = field(default_factory=tuple)
-    greek_rotor: str = "BETA"
+    greek_rotor_name: str = "BETA"
     mode: MachineModeName = MachineModeName.WEHRMACHT
 
     def __post_init__(self) -> None:
@@ -118,14 +116,16 @@ class EnigmaConfig:
         )
         object.__setattr__(
             self,
-            "positions",
-            _normalize_key_positions(self.positions, MODE_SPECS[mode].rotor_count),
+            "key",
+            _normalize_key_positions(self.key, MODE_SPECS[mode].rotor_count),
         )
         object.__setattr__(
             self, "reflector_name", _normalize_reflector_name(self.reflector_name)
         )
         object.__setattr__(
-            self, "greek_rotor", _normalize_greek_rotor(self.greek_rotor)
+            self,
+            "greek_rotor_name",
+            _normalize_greek_rotor_name(self.greek_rotor_name),
         )
         object.__setattr__(
             self,
