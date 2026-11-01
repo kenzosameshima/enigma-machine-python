@@ -21,6 +21,12 @@ class EnigmaMachine:
 
     Construction always clones the rotors passed in, so separate machines
     never share stepping state, even when built from the same Rotor objects.
+
+    self.rotors holds every rotor in physical, reflector-to-keyboard order:
+    [greek, left, middle, right] for M4, or [left, middle, right] otherwise.
+    That ordering lets encode_signal traverse it uniformly in both
+    directions; stepping and the window display still only care about the
+    three moving rotors, which are always its last three elements.
     """
 
     def __init__(
@@ -31,22 +37,17 @@ class EnigmaMachine:
         greek_rotor: Rotor | None = None,
     ) -> None:
         self._validate_configuration(rotors, reflector_name, plugboard, greek_rotor)
-        self.rotors = [rotor.clone() for rotor in rotors]
+        greek = [greek_rotor.clone()] if greek_rotor is not None else []
+        self.rotors = greek + [rotor.clone() for rotor in rotors]
         self.reflector_name = reflector_name
         self.plugboard = plugboard
-        self.greek_rotor = greek_rotor.clone() if greek_rotor is not None else None
         self._initial_rotor_states = tuple(rotor.snapshot() for rotor in self.rotors)
-        self._initial_greek_rotor_state = (
-            self.greek_rotor.snapshot() if self.greek_rotor is not None else None
-        )
 
     def reset(self) -> None:
         """Restore the rotor windows and rings captured at construction time."""
 
         for rotor, state in zip(self.rotors, self._initial_rotor_states, strict=True):
             rotor.restore(state)
-        if self.greek_rotor is not None and self._initial_greek_rotor_state is not None:
-            self.greek_rotor.restore(self._initial_greek_rotor_state)
 
     def process_text(self, text: str) -> str:
         """Process every character in text."""
@@ -71,13 +72,7 @@ class EnigmaMachine:
         for rotor in reversed(self.rotors):
             index = rotor.encode_forward(index)
 
-        if self.greek_rotor is not None:
-            index = self.greek_rotor.encode_forward(index)
-
         index = self._reflect(index)
-
-        if self.greek_rotor is not None:
-            index = self.greek_rotor.encode_backward(index)
 
         for rotor in self.rotors:
             index = rotor.encode_backward(index)
@@ -87,10 +82,11 @@ class EnigmaMachine:
     def window(self) -> str:
         """Return the current rotor window display, Greek rotor last (matches key())."""
 
-        window = "".join(rotor.get_position_letter() for rotor in self.rotors)
-        if self.greek_rotor is not None:
-            return f"{window} {self.greek_rotor.get_position_letter()}"
-        return window
+        if len(self.rotors) == 4:
+            greek, *moving = self.rotors
+            letters = "".join(rotor.get_position_letter() for rotor in moving)
+            return f"{letters} {greek.get_position_letter()}"
+        return "".join(rotor.get_position_letter() for rotor in self.rotors)
 
     def _reflect(self, index: int) -> int:
         return letter_to_index(REFLECTORS[self.reflector_name][index])
@@ -98,7 +94,7 @@ class EnigmaMachine:
     def step_rotors(self) -> None:
         """Advance the moving rotors by one keystroke without encoding a character."""
 
-        left, middle, right = self.rotors
+        left, middle, right = self.rotors[-3:]
         step_left, step_middle, step_right = _should_step_rotors(
             middle_at_notch=middle.at_notch(),
             right_at_notch=right.at_notch(),
