@@ -202,7 +202,8 @@ rotor_order = ("I", "II", "III")
 ```
 
 Supported moving rotors are `I`, `II`, `III`, `IV`, and `V`. A moving rotor
-cannot be repeated in the same configuration.
+cannot be repeated in the same configuration. Only ASCII a-z input is
+normalized to uppercase; see "Strict ASCII validation" below.
 
 ## Ring Settings
 
@@ -227,17 +228,33 @@ Three-rotor modes require three letters. M4 requires four letters. Only ASCII a-
 normalized to uppercase before processing. Every other non-A-Z character is
 preserved and does not advance rotors.
 
-### Current configuration-text normalization
+### Strict ASCII validation (breaking change)
 
-Message processing and configuration parsing currently have different rules.
-Configuration parsing retains its existing Unicode `upper()` behavior: keys
-`Aß`, `ıBC`, and `ſBC` normalize to `ASS`, `IBC`, and `SBC`; `A1BC` normalizes
-to `ABC` because non-A-Z characters are discarded before the length check.
-A lone `ß`, `ı`, or `ſ` still fails the required three-letter key length.
-In plugboard pairs, `ı` and `ſ` normalize to `I` and `S`, while `ß` is rejected
-because `SS` is not a single A-Z letter. Empty, multi-character and non-letter
-pair values retain their original validation messages. Tests pin this existing
-behavior pending a separate configuration-input policy decision.
+Keys strip leading/trailing whitespace only, then require exactly three ASCII
+letters for three-rotor modes or four for M4. ASCII a-z is normalized to A-Z;
+internal whitespace, digits, separators and non-ASCII characters are rejected
+with `ValueError` and the existing `Key must contain exactly N letters` message.
+For example, `" abc "` is accepted as `ABC`, but `Aß`, `ıBC`, `ſBC`, `A1BC`
+and `a b c` are rejected. The previous Unicode expansion and silent character
+filtering behavior is no longer supported.
+
+Plugboard pairs likewise accept only ASCII letters, in either case. Unicode
+case aliases such as `ı` and `ſ` are rejected like `ß`, including in the CLI.
+Validation messages remain unchanged.
+
+`rotor_order`, `reflector_name`, and `greek_rotor_name` follow the same rule:
+each is normalized with ASCII-only uppercasing before being checked against
+its fixed set of valid names. A Unicode case alias no longer silently passes
+as a different, valid name — for example, `rotor_order=("ı", "II", "III")`
+previously normalized to `("I", "II", "III")` and was accepted; it now raises
+`ValueError`. The three matching CLI prompts (`prompt_rotor_order`,
+`prompt_reflector`, `prompt_greek_rotor`) enforce the same rule.
+
+`enigma.alphabet.ascii_upper` provides the shared normalization rule used by
+every site above: it uppercases only ASCII a-z and preserves every other
+character exactly, so it can never expand a single character into several
+(unlike `str.upper()`, e.g. `"ß".upper() == "SS"`). Message processing uses
+it too, and still preserves non-ASCII characters without stepping rotors.
 
 ## Plugboard
 
@@ -252,7 +269,7 @@ Rules:
 - Maximum of 10 pairs.
 - Each pair must contain two A-Z letters.
 - A letter can appear in only one pair.
-- Pair input is normalized to uppercase.
+- Only ASCII a-z pair input is normalized to uppercase.
 
 ## Reflectors
 
@@ -371,7 +388,9 @@ its 225 string/number literals are unchanged.
 
 ### Mutation testing (local development only)
 
-Cosmic Ray 8.7.0 is part of the development extra. It is never run in CI.
+Cosmic Ray 8.7.0 is isolated in the optional `mutation` extra. Install it with
+`python -m pip install -e ".[dev,mutation]"`. CI installs only `dev`, so it
+neither installs nor runs Cosmic Ray.
 The runner copies the source and tests into a new directory outside the
 checkout so mutations cannot edit the working tree:
 
@@ -381,8 +400,9 @@ python tools/mutation.py /absolute/path/to/new-mutation-run
 
 On Windows, use an absolute Windows path for that argument. The output contains
 `mutation.toml`, source hashes, `session.sqlite` and complete `results.json`,
-including survivor diffs. The five targets are `rotors`, `machine`, `plugboard`,
-`config`, and `modes`; the complete suite runs with fixed random/Hypothesis seeds.
+including survivor diffs. The targets are `rotors`, `machine`, `plugboard`, `config`, `modes`, and now
+`alphabet` so the shared ASCII normalizer is also mutated. The complete suite
+runs with fixed random/Hypothesis seeds.
 The timeout is 30 seconds per mutant. Preserve each run for before/after comparison.
 Annotation-only and equivalent-in-domain mutants must be reported separately;
 never change an expected ciphertext to kill or accommodate a mutant.
@@ -393,7 +413,7 @@ never change an expected ciphertext to kill or accommodate a mutant.
 | --- | ---: | ---: | ---: | ---: |
 | Baseline `bc80ac6`, 79 tests | 500 | 408 | 92 | 81.60% |
 | Character fixes and stricter tests, before plugboard cleanup | 525 | 455 | 70 | 86.67% |
-| Final suite, 845 tests | 509 | 445 | 64 | 87.43% |
+| Before strict ASCII validation, 845 tests | 509 | 445 | 64 | 87.43% |
 
 All use Cosmic Ray 8.7.0's standard operators on the five core modules.
 The denominator changes because character validation adds mutation sites and
@@ -421,7 +441,8 @@ cipher-test target. All survivor diffs remain in the runner's `results.json`.
 | Inverse-table initial value 0 to 1 | Valid permutations overwrite every entry. |
 | Inverse-table initial value 0 to -1 | Valid permutations overwrite every entry. |
 
-Final coverage is 99.49% (468/469 statements, 118/120 branches). Remaining
+Coverage after strict ASCII validation is 99.49% (469/470 statements,
+116/118 branches). Remaining
 coverage gaps are the CLI module-entry invocation and the always-true
 right-rotor stepping decision. These are retained in the coverage denominator.
 

@@ -2,6 +2,32 @@
 
 ## Unreleased
 
+### Breaking input-validation change
+
+- Keys now strip surrounding whitespace only and require exactly the mode's
+  rotor count of ASCII letters. Internal spaces, digits, separators and
+  non-ASCII input raise the existing `ValueError` message instead of being
+  silently filtered or expanded. For example, `Aß`, `ıBC`, `ſBC`, `A1BC`,
+  and `a b c` are rejected; ` abc ` remains accepted as `ABC`.
+- Plugboard Unicode case aliases such as `ı` and `ſ` are rejected like `ß`,
+  in both programmatic configuration and the interactive prompt.
+- `rotor_order`, `reflector_name`, and `greek_rotor_name` now normalize with
+  the same ASCII-only rule before being checked against their fixed name
+  sets. This closes a silent-coercion gap for rotor names specifically:
+  `rotor_order=("ı", "II", "III")` previously normalized to `("I", "II",
+  "III")` via `str.upper()` and was accepted as rotor I; it now raises
+  `ValueError`. The three matching CLI prompts (`prompt_rotor_order`,
+  `prompt_reflector`, `prompt_greek_rotor`) enforce the same rule.
+- Introduce one `ascii_upper` helper shared by message, key, pair, rotor,
+  reflector, and Greek rotor processing. Message behavior remains unchanged:
+  non-ASCII characters pass through without stepping. Configuration error
+  messages retain their previous wording (reflector/Greek-rotor "unknown
+  name" messages now echo the raw rejected input instead of its prior,
+  Unicode-expanded form).
+- Move Cosmic Ray from `dev` to a separate `mutation` extra; CI no longer
+  installs it. Include the shared alphabet module in local mutation runs.
+
+
 ### Test suite hardening
 
 - Expand the suite from 79 to 845 tests; reach 99.49% combined coverage.
@@ -10,8 +36,7 @@
   and one intentionally unpinned internal signature; all are documented.
 
 - Remove redundant plugboard length checks; A-Z membership already rejects
-  empty and multi-character values with the same message. Pin existing Unicode
-  configuration normalization without changing its behavior, and verify that
+  empty and multi-character values with the same message. Verify that
   every rotor has exactly 26 forward and inverse contacts.
 - Normalize only ASCII a-z in message processing; preserve all other non-A-Z
   characters unchanged without stepping. Reject empty, multi-character and
