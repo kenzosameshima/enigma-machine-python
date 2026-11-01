@@ -158,8 +158,11 @@ The supported public API is:
 - `enigma.Rotor`, `enigma.RotorSpec`, and `enigma.RotorState`
 
 `enigma_process()` is the preferred high-level API. It builds a fresh machine for
-each call, normalizes input text to uppercase, preserves spaces, punctuation, and
-numbers, and advances rotors only for A-Z characters.
+each call, normalizes only ASCII a-z to uppercase. Every other non-A-Z character is
+preserved unchanged and does not advance rotors, including Unicode letters
+whose Unicode uppercase form would expand or become an ASCII letter.
+`process_char()` requires exactly one character and rejects invalid input with
+`ValueError` before changing rotor state.
 
 Invalid user configuration raises `ValueError`. Expected validation failures
 include unsupported modes, invalid rotor names, repeated moving rotors, ring
@@ -168,8 +171,8 @@ Greek rotors, and invalid plugboard pairs. `EnigmaConfig` validates every field
 in `__post_init__`, on every construction path.
 
 `EnigmaMachine.from_config()` returns a fresh machine built from an
-already-validated `EnigmaConfig`. Construction — through `from_config` or by
-calling `EnigmaMachine()` directly — always defensively clones the rotors
+already-validated `EnigmaConfig`. Construction â€” through `from_config` or by
+calling `EnigmaMachine()` directly â€” always defensively clones the rotors
 passed in, so separate machines never share stepping state, even when built
 from the same `Rotor` objects. Call `machine.reset()` to rewind a machine to
 the rotor positions it was constructed with, without building a new one.
@@ -220,9 +223,21 @@ The `key` argument sets the starting window positions:
 key = "ABC"
 ```
 
-Three-rotor modes require three letters. M4 requires four letters. Input text is
-normalized to uppercase before processing. Spaces, punctuation, and numbers are
-preserved and do not advance rotors.
+Three-rotor modes require three letters. M4 requires four letters. Only ASCII a-z input is
+normalized to uppercase before processing. Every other non-A-Z character is
+preserved and does not advance rotors.
+
+### Current configuration-text normalization
+
+Message processing and configuration parsing currently have different rules.
+Configuration parsing retains its existing Unicode `upper()` behavior: keys
+`Aß`, `ıBC`, and `ſBC` normalize to `ASS`, `IBC`, and `SBC`; `A1BC` normalizes
+to `ABC` because non-A-Z characters are discarded before the length check.
+A lone `ß`, `ı`, or `ſ` still fails the required three-letter key length.
+In plugboard pairs, `ı` and `ſ` normalize to `I` and `S`, while `ß` is rejected
+because `SS` is not a single A-Z letter. Empty, multi-character and non-letter
+pair values retain their original validation messages. Tests pin this existing
+behavior pending a separate configuration-input policy decision.
 
 ## Plugboard
 
@@ -278,8 +293,8 @@ does shift the *wiring* offset used during encoding (`Rotor.encode_forward`
 and `encode_backward` correctly apply `position - ring`), so it's a natural
 but incorrect assumption that the same offset should apply to notch
 detection. It shouldn't, because of where the notch physically lives. The
-alphabet ring — the part that both carries the turnover notch and shows the
-window letter — can be rotated relative to the internal wiring core (that
+alphabet ring â€” the part that both carries the turnover notch and shows the
+window letter â€” can be rotated relative to the internal wiring core (that
 rotation *is* the ring setting), but the notch and the window letter are
 fixed to each other on that same ring. Turning the ring setting knob moves
 the wiring relative to the notch; it never moves the notch relative to the
@@ -293,8 +308,8 @@ into the turnover check:
 return (self.position + self.ring) % 26 in self.notches
 ```
 
-This meant any configuration using a non-default ring setting — the
-historically normal case, not the exception — would step the wrong rotor on
+This meant any configuration using a non-default ring setting â€” the
+historically normal case, not the exception â€” would step the wrong rotor on
 the wrong keystroke, silently diverging from a real Enigma's keystream past
 the first turnover. It shipped unnoticed because the only ring-setting test
 vector in the suite (`ring_settings=(20, 13, 5)`, `HELLOWORLD`) happens not
@@ -317,26 +332,98 @@ in `tests/test_machine.py`), closing the coverage gap that let it ship.
 
 ## Tests
 
-Run the test suite:
+Install development tools with `python -m pip install -e ".[dev]"`.
+The runtime package has no dependencies. Run the complete suite with:
 
 ```bash
-python3 -m pytest
+python -m pytest --cov=enigma --cov-branch
+python -m ruff check enigma tests
+python -m ruff format --check .
+python -m mypy enigma tests
 ```
 
-Run tests with coverage:
+`pyproject.toml` owns the 90% coverage threshold. Tests use strict markers,
+strict configuration, warnings as errors, strict xfails, and randomized order.
+The `slow` marker is registered for future expensive checks; the current full
+suite runs in about five seconds on the development machine, including coverage.
+Reproduce an order with `--randomly-seed=<reported-seed>`; Hypothesis also prints
+reproduction information on failure.
+
+Coverage includes all 60 ordered moving-rotor triples with both three-rotor
+modes and reflectors, and all BETA/GAMMA and thin-reflector combinations.
+Hypothesis varies Unicode/ASCII text, keys, rings and disjoint plugboard pairs.
+Tests cover inverse permutations, reciprocity, no fixed points, exact reset and
+continuation, state isolation, immutable settings, validation messages, the
+public imports/signature, and CLI error-and-exit behavior (there is no re-prompt).
+The full-period checks start at AAA, verify 16,900 distinct windows and 26
+double-steps, and keep the Greek rotor fixed for M4. Notch checks exhaust every
+ring and window; turnover sequences cover every ordered triple.
+
+Published Enigma I examples come from <https://kerryb.github.io/enigma/>.
+The same I-V/B examples also exercise the compatible naval three-rotor mode.
+For M4 BETA/GAMMA and non-default-ring turnover cases, `tests/reference_enigma.py`
+implements an independent contact-pair model from the published wiring at
+<https://www.cryptomuseum.com/crypto/enigma/wiring.htm>, without importing
+`enigma`. These are explicitly differential tests, not claimed historical
+message vectors. Published examples anchor the reference model separately.
+`tests/test_known_answers.py` remains the pre-refactor characterization set;
+its 225 string/number literals are unchanged.
+
+### Mutation testing (local development only)
+
+Cosmic Ray 8.7.0 is part of the development extra. It is never run in CI.
+The runner copies the source and tests into a new directory outside the
+checkout so mutations cannot edit the working tree:
 
 ```bash
-python3 -m pytest --cov=enigma --cov-report=term-missing --cov-fail-under=80
+python tools/mutation.py /absolute/path/to/new-mutation-run
 ```
 
-Coverage threshold is initially set to 80% and will be increased gradually as
-CLI coverage improves. The target is 90% after extracting and testing CLI
-command logic without relying on brittle interactive I/O tests.
+On Windows, use an absolute Windows path for that argument. The output contains
+`mutation.toml`, source hashes, `session.sqlite` and complete `results.json`,
+including survivor diffs. The five targets are `rotors`, `machine`, `plugboard`,
+`config`, and `modes`; the complete suite runs with fixed random/Hypothesis seeds.
+The timeout is 30 seconds per mutant. Preserve each run for before/after comparison.
+Annotation-only and equivalent-in-domain mutants must be reported separately;
+never change an expected ciphertext to kill or accommodate a mutant.
 
-The suite covers round trips, plugboard validation, M4 validation, key sizing,
-rotor stepping, turnover, double-step behavior, mutable machine state, and the
-Daily Key Sheet CLI command. It also includes Enigma I reference vectors from
-<https://kerryb.github.io/enigma/>.
+### Recorded mutation results (2026-11-01)
+
+| Snapshot | Mutants | Killed | Survived | Raw score |
+| --- | ---: | ---: | ---: | ---: |
+| Baseline `bc80ac6`, 79 tests | 500 | 408 | 92 | 81.60% |
+| Character fixes and stricter tests, before plugboard cleanup | 525 | 455 | 70 | 86.67% |
+| Final suite, 845 tests | 509 | 445 | 64 | 87.43% |
+
+All use Cosmic Ray 8.7.0's standard operators on the five core modules.
+The denominator changes because character validation adds mutation sites and
+removing redundant plugboard conditions removes sites. Counts are raw: no
+survivors are subtracted to inflate the score. The final run completed without
+incompetent mutants, worker errors or timeouts. All 22 originally actionable
+survivors were killed in the intermediate run; the final run additionally
+kills the incorrectly sized inverse-table mutant. The five redundant-length
+survivors disappeared with their production conditions.
+
+The final 64 survivors comprise 55 changes solely to deferred annotations,
+eight accepted equivalents listed below, and one intentionally unpinned
+internal `validate_mode` keyword/positional signature. Annotation changes are
+not claimed equivalent under introspection; they are outside the runtime
+cipher-test target. All survivor diffs remain in the runner's `results.json`.
+
+| Accepted equivalent | Reason within the supported domain |
+| --- | --- |
+| Key length `!=` to `is not` | CPython shares integer counts 3 and 4. |
+| Construction `zip(strict=False)` | Validated sequences have matching lengths. |
+| Reset `zip(strict=False)` | Rotor/snapshot counts match absent external structural edits. |
+| Window rotor count `== 4` to `>= 4` | Supported construction has only 3 or 4 rotors. |
+| Mode moving-rotor count `!=` to `is not` | CPython shares integer count 3. |
+| Mode ring count `!=` to `is not` | CPython shares integer counts 3 and 4. |
+| Inverse-table initial value 0 to 1 | Valid permutations overwrite every entry. |
+| Inverse-table initial value 0 to -1 | Valid permutations overwrite every entry. |
+
+Final coverage is 99.49% (468/469 statements, 118/120 branches). Remaining
+coverage gaps are the CLI module-entry invocation and the always-true
+right-rotor stepping decision. These are retained in the coverage denominator.
 
 ## Linting And Formatting
 
@@ -351,7 +438,7 @@ python3 -m ruff format .
 Type checking (strict):
 
 ```bash
-python3 -m mypy enigma
+python3 -m mypy enigma tests
 ```
 
 GitHub Actions runs tests with coverage, Ruff (lint and format check), and
@@ -374,7 +461,7 @@ git status
 python3 -m pytest
 python3 -m ruff check enigma tests
 python3 -m ruff format .
-python3 -m mypy enigma
+python3 -m mypy enigma tests
 ```
 
 Review `CHANGELOG.md`, confirm the version in `pyproject.toml`, create an
@@ -399,6 +486,4 @@ distribution is an explicit goal for that release.
 - Add richer examples for M4 key-sheet workflows.
 - Expand type coverage where it improves readability.
 - Keep the public API stable while tightening validation around invalid input.
-- Raise coverage threshold from 80% to 90% after extracting and testing CLI
-  command logic.
 - Preserve the small, explicit architecture for educational use.

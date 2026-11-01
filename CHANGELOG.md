@@ -2,9 +2,40 @@
 
 ## Unreleased
 
-Internal refactor for simplicity and consistency with PEP 20. Cipher output
-is unchanged throughout, pinned by `tests/test_known_answers.py` across
-wehrmacht, naval, and M4 configurations.
+### Test suite hardening
+
+- Expand the suite from 79 to 845 tests; reach 99.49% combined coverage.
+  Raw mutation score improves from 408/500 (81.60%) to 445/509 (87.43%).
+  Remaining mutants are 55 deferred annotations, eight accepted equivalents,
+  and one intentionally unpinned internal signature; all are documented.
+
+- Remove redundant plugboard length checks; A-Z membership already rejects
+  empty and multi-character values with the same message. Pin existing Unicode
+  configuration normalization without changing its behavior, and verify that
+  every rotor has exactly 26 forward and inverse contacts.
+- Normalize only ASCII a-z in message processing; preserve all other non-A-Z
+  characters unchanged without stepping. Reject empty, multi-character and
+  non-string `process_char` input before advancing any rotor.
+- Add exhaustive rotor/reflector combinations, generated cipher properties,
+  all-ring inverse/notch checks, and 16,900-step period checks with exactly
+  26 double-steps. Cover immutable settings, independent machine state,
+  validation branches/messages, public imports/signature and CLI error exits.
+- Add an independent contact-pair reference model based on published wiring
+  for differential M4 and non-default-ring turnover checks; retain the
+  historical-vector/characterization distinction.
+- Type-check tests as well as the package. Changes to the characterization
+  vectors are annotation-only, with all 225 string/number literals verified
+  unchanged mechanically.
+- Enforce strict pytest settings, warnings as errors, randomized order and
+  pytest lint rules. Raise coverage to 90% with pyproject.toml as the only
+  threshold source. Add development-only Hypothesis and Cosmic Ray tooling,
+  including mutation execution in a separate copy outside the checkout.
+
+
+The construction-model refactor simplifies the implementation in the spirit of
+PEP 20. Its cipher outputs remain pinned by `tests/test_known_answers.py` across
+wehrmacht, naval, and M4 configurations. The character-handling fix above
+intentionally changes non-ASCII normalization.
 
 ### Breaking changes
 
