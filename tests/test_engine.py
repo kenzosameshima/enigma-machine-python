@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import unittest
+
 import pytest
 
 from enigma import enigma_process
@@ -178,3 +180,13 @@ def test_enigma_process_does_not_reuse_mutable_machine_state() -> None:
 def test_enigma_process_rejects_unknown_mode_with_predictable_message() -> None:
     with pytest.raises(ValueError, match="Unsupported machine mode: commercial"):
         enigma_process(text="HELLO", key="AAA", mode="commercial")
+
+
+class UnittestCompatibilityTests(unittest.TestCase):
+    """Confirms enigma_process also works under stdlib unittest, not just pytest."""
+
+    def test_enigma_process_round_trip(self) -> None:
+        encrypted = enigma_process("HELLO WORLD", "ABC")
+        decrypted = enigma_process(encrypted, "ABC")
+
+        self.assertEqual(decrypted, "HELLO WORLD")

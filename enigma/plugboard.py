@@ -40,6 +40,13 @@ class Plugboard:
         return mapping
 
 
+def normalize_pairs(pairs: Sequence[tuple[str, str]]) -> tuple[tuple[str, str], ...]:
+    """Validate and normalize plugboard pairs."""
+
+    Plugboard(pairs)
+    return tuple(normalize_pair(pair) for pair in pairs)
+
+
 def normalize_pair(pair: object) -> tuple[str, str]:
     if not isinstance(pair, (list, tuple)) or len(pair) != 2:
         raise ValueError("Plugboard pair must contain exactly two letters")

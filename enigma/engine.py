@@ -1,4 +1,4 @@
-"""Public engine helpers kept for programmatic use and compatibility."""
+"""Programmatic entry point for running text through a configured machine."""
 
 from __future__ import annotations
 
@@ -7,34 +7,9 @@ from collections.abc import Sequence
 from .alphabet import DEFAULT_RINGS, DEFAULT_ROTORS
 from .config import EnigmaConfigBuilder
 from .factory import EnigmaFactory
-from .machine import EnigmaMachine
 from .modes import MachineModeName, ReflectorName
-from .plugboard import Plugboard, normalize_pair
-from .rotors import Rotor
 
-__all__ = [
-    "enigma_process",
-    "normalize_pairs",
-    "step_rotors",
-]
-
-
-def normalize_pairs(pairs: Sequence[tuple[str, str]]) -> tuple[tuple[str, str], ...]:
-    """Validate and normalize plugboard pairs."""
-
-    Plugboard(pairs)
-    return tuple(normalize_pair(pair) for pair in pairs)
-
-
-def step_rotors(rotors: Sequence[Rotor]) -> None:
-    """Compatibility helper for callers that used the old function."""
-
-    EnigmaMachine(
-        rotors,
-        ReflectorName.B.value,
-        Plugboard(),
-        copy_rotors=False,
-    ).step_rotors()
+__all__ = ["enigma_process"]
 
 
 def enigma_process(

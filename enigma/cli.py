@@ -7,9 +7,9 @@ from collections.abc import Sequence
 
 from .alphabet import DEFAULT_ROTORS, MOVING_ROTORS, is_base_letter
 from .config import EnigmaConfig, EnigmaConfigBuilder
-from .engine import normalize_pairs
 from .factory import EnigmaFactory
 from .modes import MachineModeName, ReflectorName
+from .plugboard import normalize_pairs
 
 MAX_MESSAGE_LENGTH = 128
 

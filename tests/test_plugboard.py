@@ -4,8 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from enigma.engine import normalize_pairs
-from enigma.plugboard import Plugboard
+from enigma.plugboard import Plugboard, normalize_pairs
 
 
 @pytest.mark.parametrize(
