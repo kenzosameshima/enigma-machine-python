@@ -57,6 +57,6 @@ def normalize_pair(pair: object) -> tuple[str, str]:
 
     a = first.upper()
     b = second.upper()
-    if len(a) != 1 or len(b) != 1 or not is_base_letter(a) or not is_base_letter(b):
+    if not is_base_letter(a) or not is_base_letter(b):
         raise ValueError(f"Invalid plugboard pair: {first}-{second}")
     return a, b
