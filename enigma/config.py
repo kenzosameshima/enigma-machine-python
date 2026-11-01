@@ -11,10 +11,11 @@ from .alphabet import (
     DEFAULT_POSITIONS,
     DEFAULT_RINGS,
     DEFAULT_ROTORS,
+    GREEK_ROTORS,
     is_base_letter,
     validate_moving_rotor_names,
 )
-from .data import REFLECTORS, ROTOR_SPECS
+from .data import REFLECTORS
 from .modes import (
     MODE_SPECS,
     GreekRotorName,
@@ -76,9 +77,16 @@ def _validate_ring_settings(ring_settings: Sequence[int]) -> tuple[int, ...]:
 
 
 def _validate_reflector_and_greek(config: EnigmaConfig) -> None:
+    """Validate reflector and Greek rotor identity, regardless of mode.
+
+    The Greek rotor is checked unconditionally, even in three-rotor mode
+    where it goes unused, so there is one rule for what counts as a valid
+    Greek rotor rather than a silently-ignored field.
+    """
+
     if config.reflector_name not in REFLECTORS:
         raise ValueError(f"Unknown reflector: {config.reflector_name}")
-    if config.greek_rotor not in ROTOR_SPECS:
+    if config.greek_rotor not in GREEK_ROTORS:
         raise ValueError(f"Unknown Greek rotor: {config.greek_rotor}")
 
 
@@ -133,7 +141,6 @@ class EnigmaConfig:
             rotor_order=self.rotor_order,
             ring_settings=self.ring_settings,
             reflector_name=self.reflector_name,
-            greek_rotor=self.greek_rotor,
         )
         Plugboard(self.plugboard_pairs)
 

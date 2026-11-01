@@ -63,6 +63,17 @@ def test_m4_rejects_invalid_greek_rotor() -> None:
         )
 
 
+def test_three_rotor_mode_also_rejects_invalid_greek_rotor() -> None:
+    """Greek rotor identity is checked for every mode, not only M4.
+
+    Three-rotor mode never uses the Greek rotor, but an explicitly invalid
+    value is still rejected rather than silently accepted and ignored.
+    """
+
+    with pytest.raises(ValueError, match="Greek rotor"):
+        make_machine(greek_rotor_name="I")
+
+
 def test_m4_rejects_incompatible_reflector() -> None:
     with pytest.raises(ValueError, match="thin reflectors"):
         make_machine(

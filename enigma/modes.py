@@ -5,8 +5,6 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import Enum
 
-from .alphabet import GREEK_ROTORS
-
 
 class MachineModeName(str, Enum):
     """Supported Enigma machine modes."""
@@ -97,12 +95,13 @@ def validate_mode(
     rotor_order: tuple[str, ...],
     ring_settings: tuple[int, ...],
     reflector_name: str,
-    greek_rotor: str,
 ) -> None:
     """Validate rotor/ring counts and reflector choice for mode.
 
     Rotor position length is already guaranteed by key normalization, which
-    runs before this check and sizes to the same mode's rotor_count.
+    runs before this check and sizes to the same mode's rotor_count. Greek
+    rotor identity is validated unconditionally wherever a config is built,
+    regardless of mode, so it is not re-checked here.
     """
 
     spec = MODE_SPECS[mode]
@@ -112,5 +111,3 @@ def validate_mode(
         raise ValueError(f"{spec.label} requires {spec.rotor_count} ring settings")
     if reflector_name not in spec.allowed_reflectors:
         raise ValueError(f"{spec.label} uses {spec.reflector_description}")
-    if spec.requires_greek and greek_rotor not in GREEK_ROTORS:
-        raise ValueError(f"{spec.label} requires Greek rotor BETA or GAMMA")
