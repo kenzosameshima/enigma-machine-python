@@ -3,34 +3,11 @@
 from __future__ import annotations
 
 import pytest
-from helpers import make_rotor
+from helpers import make_machine, make_rotor
 
-from enigma.config import EnigmaConfig
 from enigma.machine import EnigmaMachine, _should_step_rotors
 from enigma.modes import MachineModeName
 from enigma.plugboard import Plugboard
-
-
-def make_machine(
-    *,
-    key: str = "AAA",
-    mode: MachineModeName | str = MachineModeName.WEHRMACHT,
-    rotor_order: tuple[str, ...] = ("I", "II", "III"),
-    ring_settings: tuple[int, ...] = (1, 1, 1),
-    reflector_name: str = "B",
-    plug_pairs: tuple[tuple[str, str], ...] = (),
-    greek_rotor_name: str = "BETA",
-) -> EnigmaMachine:
-    config = EnigmaConfig(
-        rotor_order=rotor_order,
-        ring_settings=ring_settings,
-        key=key,
-        reflector_name=reflector_name,
-        plugboard_pairs=plug_pairs,
-        greek_rotor_name=greek_rotor_name,
-        mode=mode,
-    )
-    return EnigmaMachine.from_config(config)
 
 
 def test_machine_state_is_mutable_between_process_text_calls() -> None:

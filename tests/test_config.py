@@ -3,30 +3,9 @@
 from __future__ import annotations
 
 import pytest
+from helpers import make_machine
 
-from enigma import EnigmaConfig, EnigmaMachine, MachineModeName, enigma_process
-
-
-def make_machine(
-    *,
-    key: str = "AAA",
-    mode: str = "wehrmacht",
-    rotor_order: tuple[str, ...] = ("I", "II", "III"),
-    ring_settings: tuple[int, ...] = (1, 1, 1),
-    reflector_name: str = "B",
-    plug_pairs: tuple[tuple[str, str], ...] = (),
-    greek_rotor_name: str = "BETA",
-) -> EnigmaMachine:
-    config = EnigmaConfig(
-        rotor_order=rotor_order,
-        ring_settings=ring_settings,
-        key=key,
-        reflector_name=reflector_name,
-        plugboard_pairs=plug_pairs,
-        greek_rotor_name=greek_rotor_name,
-        mode=mode,
-    )
-    return EnigmaMachine.from_config(config)
+from enigma import EnigmaConfig, MachineModeName, enigma_process
 
 
 def test_from_config_creates_independent_rotor_states() -> None:
