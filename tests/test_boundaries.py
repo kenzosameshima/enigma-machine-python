@@ -84,7 +84,7 @@ def test_key_and_ring_counts_for_each_mode(mode: MachineModeName, delta: int) ->
 def test_config_normalizes_names_and_accepts_ring_endpoints(ring: int) -> None:
     config = EnigmaConfig(
         rotor_order=(" i ", "ii", " III"),
-        key="a b c",
+        key=" abc ",
         ring_settings=(ring,) * 3,
         reflector_name=" b ",
         greek_rotor_name=" gamma ",
