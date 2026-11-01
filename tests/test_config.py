@@ -1,21 +1,14 @@
-"""Configuration builder and factory validation tests."""
+"""EnigmaConfig construction and validation tests."""
 
 from __future__ import annotations
 
 import pytest
 
-from enigma import (
-    EnigmaConfig,
-    EnigmaConfigBuilder,
-    EnigmaFactory,
-    MachineModeName,
-    enigma_process,
-)
+from enigma import EnigmaConfig, EnigmaMachine, MachineModeName, enigma_process
 
 
 def make_machine(
     *,
-    text: str = "",
     key: str = "AAA",
     mode: str = "wehrmacht",
     rotor_order: tuple[str, ...] = ("I", "II", "III"),
@@ -23,23 +16,20 @@ def make_machine(
     reflector_name: str = "B",
     plug_pairs: tuple[tuple[str, str], ...] = (),
     greek_rotor_name: str = "BETA",
-):
-    config = (
-        EnigmaConfigBuilder()
-        .text(text)
-        .mode(mode)
-        .rotors(rotor_order)
-        .rings(ring_settings)
-        .key(key)
-        .reflector(reflector_name)
-        .plugboard(plug_pairs)
-        .greek(greek_rotor_name)
-        .build()
+) -> EnigmaMachine:
+    config = EnigmaConfig(
+        rotor_order=rotor_order,
+        ring_settings=ring_settings,
+        positions=key,
+        reflector_name=reflector_name,
+        plugboard_pairs=plug_pairs,
+        greek_rotor=greek_rotor_name,
+        mode=mode,
     )
-    return EnigmaFactory().create(config)
+    return EnigmaMachine.from_config(config)
 
 
-def test_factory_creates_independent_rotor_states() -> None:
+def test_from_config_creates_independent_rotor_states() -> None:
     first_machine = make_machine(key="AAA")
     second_machine = make_machine(key="AAA")
 
@@ -94,7 +84,7 @@ def test_key_with_incorrect_size_fails() -> None:
         make_machine(key="AB")
 
 
-def test_builder_rejects_non_integer_ring_settings_with_predictable_message() -> None:
+def test_enigma_process_rejects_non_integer_ring_settings() -> None:
     with pytest.raises(ValueError, match="Ring settings must be integers"):
         enigma_process(
             text="HELLO",
@@ -103,7 +93,7 @@ def test_builder_rejects_non_integer_ring_settings_with_predictable_message() ->
         )
 
 
-def test_builder_rejects_non_text_rotor_names_with_predictable_message() -> None:
+def test_enigma_process_rejects_non_text_rotor_names() -> None:
     with pytest.raises(ValueError, match="Rotor names must be text"):
         enigma_process(
             text="HELLO",
@@ -112,15 +102,14 @@ def test_builder_rejects_non_text_rotor_names_with_predictable_message() -> None
         )
 
 
-def test_builder_creates_machine_with_expected_window() -> None:
-    machine = make_machine(text="HELLO", key="ABC")
+def test_direct_config_creates_machine_with_expected_window() -> None:
+    machine = make_machine(key="ABC")
 
     assert machine.window() == "ABC"
 
 
 def test_config_mode_defaults_to_wehrmacht() -> None:
     config = EnigmaConfig(
-        text="",
         rotor_order=("I", "II", "III"),
         ring_settings=(1, 1, 1),
         positions="AAA",
@@ -132,7 +121,6 @@ def test_config_mode_defaults_to_wehrmacht() -> None:
 
 def test_config_mode_accepts_explicit_value() -> None:
     config = EnigmaConfig(
-        text="",
         rotor_order=("I", "II", "III"),
         ring_settings=(1, 1, 1, 1),
         positions="AAAA",
@@ -145,7 +133,6 @@ def test_config_mode_accepts_explicit_value() -> None:
 
 def test_direct_config_normalizes_mutable_containers_to_hashable_tuples() -> None:
     config = EnigmaConfig(
-        text="HELLO",
         rotor_order=["I", "II", "III"],  # type: ignore[arg-type]
         ring_settings=(1, 1, 1),
         positions="AAA",
@@ -154,14 +141,3 @@ def test_direct_config_normalizes_mutable_containers_to_hashable_tuples() -> Non
 
     assert config.rotor_order == ("I", "II", "III")
     hash(config)
-
-
-def test_direct_config_rejects_non_string_text() -> None:
-    with pytest.raises(ValueError, match="Text must be a string"):
-        EnigmaConfig(
-            text=None,  # type: ignore[arg-type]
-            rotor_order=("I", "II", "III"),
-            ring_settings=(1, 1, 1),
-            positions="AAA",
-            reflector_name="B",
-        )

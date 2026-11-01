@@ -5,7 +5,7 @@ from __future__ import annotations
 import pytest
 from helpers import make_rotor
 
-from enigma import EnigmaConfigBuilder, EnigmaFactory
+from enigma.config import EnigmaConfig
 from enigma.machine import EnigmaMachine, _should_step_rotors
 from enigma.modes import MachineModeName
 from enigma.plugboard import Plugboard
@@ -13,7 +13,6 @@ from enigma.plugboard import Plugboard
 
 def make_machine(
     *,
-    text: str = "",
     key: str = "AAA",
     mode: MachineModeName | str = MachineModeName.WEHRMACHT,
     rotor_order: tuple[str, ...] = ("I", "II", "III"),
@@ -21,20 +20,17 @@ def make_machine(
     reflector_name: str = "B",
     plug_pairs: tuple[tuple[str, str], ...] = (),
     greek_rotor_name: str = "BETA",
-):
-    config = (
-        EnigmaConfigBuilder()
-        .text(text)
-        .mode(mode)
-        .rotors(rotor_order)
-        .rings(ring_settings)
-        .key(key)
-        .reflector(reflector_name)
-        .plugboard(plug_pairs)
-        .greek(greek_rotor_name)
-        .build()
+) -> EnigmaMachine:
+    config = EnigmaConfig(
+        rotor_order=rotor_order,
+        ring_settings=ring_settings,
+        positions=key,
+        reflector_name=reflector_name,
+        plugboard_pairs=plug_pairs,
+        greek_rotor=greek_rotor_name,
+        mode=mode,
     )
-    return EnigmaFactory().create(config)
+    return EnigmaMachine.from_config(config)
 
 
 def test_machine_state_is_mutable_between_process_text_calls() -> None:
@@ -229,3 +225,10 @@ def test_m4_window_round_trips_through_key() -> None:
     )
 
     assert rebuilt.window() == machine.window()
+
+
+def test_process_text_rejects_non_string_input() -> None:
+    machine = make_machine()
+
+    with pytest.raises(ValueError, match="Text must be a string"):
+        machine.process_text(None)  # type: ignore[arg-type]

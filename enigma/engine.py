@@ -5,9 +5,9 @@ from __future__ import annotations
 from collections.abc import Sequence
 
 from .alphabet import DEFAULT_RINGS, DEFAULT_ROTORS
-from .config import EnigmaConfigBuilder
-from .factory import EnigmaFactory
-from .modes import MachineModeName, ReflectorName
+from .config import EnigmaConfig
+from .machine import EnigmaMachine
+from .modes import MachineModeName, ReflectorName, mode_name_for
 
 __all__ = ["enigma_process"]
 
@@ -30,17 +30,14 @@ def enigma_process(
     plugboard pairs raise ValueError.
     """
 
-    config = (
-        EnigmaConfigBuilder()
-        .text(text)
-        .mode(mode)
-        .rotors(rotor_order)
-        .rings(ring_settings)
-        .key(key)
-        .reflector(reflector_name)
-        .plugboard(plug_pairs)
-        .greek(greek_rotor_name)
-        .build()
+    config = EnigmaConfig(
+        rotor_order=tuple(rotor_order),
+        ring_settings=tuple(ring_settings),
+        positions=key,
+        reflector_name=reflector_name,
+        plugboard_pairs=tuple(plug_pairs or ()),
+        greek_rotor=greek_rotor_name,
+        mode=mode_name_for(mode),
     )
-    machine = EnigmaFactory().create(config)
-    return machine.process_text(config.text)
+    machine = EnigmaMachine.from_config(config)
+    return machine.process_text(text)

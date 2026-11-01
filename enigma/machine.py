@@ -11,9 +11,11 @@ from .alphabet import (
     letter_to_index,
     validate_moving_rotor_names,
 )
-from .data import REFLECTORS
+from .config import EnigmaConfig
+from .data import REFLECTORS, ROTOR_SPECS
+from .modes import MODE_SPECS
 from .plugboard import Plugboard
-from .rotors import Rotor
+from .rotors import Rotor, RotorState
 
 
 class EnigmaMachine:
@@ -43,6 +45,39 @@ class EnigmaMachine:
         self.plugboard = plugboard
         self._initial_rotor_states = tuple(rotor.snapshot() for rotor in self.rotors)
 
+    @classmethod
+    def from_config(cls, config: EnigmaConfig) -> EnigmaMachine:
+        """Build a fresh machine from an already-validated configuration."""
+
+        moving_rotors = [
+            Rotor(
+                ROTOR_SPECS[name],
+                RotorState(ring=ring - 1, position=letter_to_index(position)),
+            )
+            for name, ring, position in zip(
+                config.rotor_order,
+                config.ring_settings[:3],
+                config.positions[:3],
+                strict=True,
+            )
+        ]
+        greek_rotor = None
+        if MODE_SPECS[config.mode].requires_greek:
+            greek_rotor = Rotor(
+                ROTOR_SPECS[config.greek_rotor],
+                RotorState(
+                    ring=config.ring_settings[3] - 1,
+                    position=letter_to_index(config.positions[3]),
+                ),
+                can_step=False,
+            )
+        return cls(
+            rotors=moving_rotors,
+            reflector_name=config.reflector_name,
+            plugboard=Plugboard(config.plugboard_pairs),
+            greek_rotor=greek_rotor,
+        )
+
     def reset(self) -> None:
         """Restore the rotor windows and rings captured at construction time."""
 
@@ -52,6 +87,8 @@ class EnigmaMachine:
     def process_text(self, text: str) -> str:
         """Process every character in text."""
 
+        if not isinstance(text, str):
+            raise ValueError("Text must be a string")
         return "".join(self.process_char(char) for char in text.upper())
 
     def process_char(self, char: str) -> str:

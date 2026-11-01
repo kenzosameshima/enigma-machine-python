@@ -1,13 +1,11 @@
-"""Configuration model and builder for Enigma machines."""
+"""Configuration model for Enigma machines."""
 
 from __future__ import annotations
 
-from collections.abc import Iterable, Sequence
+from collections.abc import Sequence
 from dataclasses import dataclass, field
-from typing import TypeVar, cast
 
 from .alphabet import (
-    DEFAULT_M4_RINGS,
     DEFAULT_POSITIONS,
     DEFAULT_RINGS,
     DEFAULT_ROTORS,
@@ -25,8 +23,6 @@ from .modes import (
     validate_mode,
 )
 from .plugboard import Plugboard
-
-T = TypeVar("T")
 
 
 def _normalize_key_positions(key: str, rotor_count: int) -> str:
@@ -92,22 +88,24 @@ def _validate_reflector_and_greek(config: EnigmaConfig) -> None:
 
 @dataclass(frozen=True)
 class EnigmaConfig:
-    """Complete machine configuration."""
+    """Complete machine settings: rotors, rings, positions, reflector, plugboard.
 
-    text: str
-    rotor_order: tuple[str, ...]
-    ring_settings: tuple[int, ...]
-    positions: str
-    reflector_name: str
+    Validated once, in __post_init__, on every construction path. Defaults
+    describe a default three-rotor machine; they are not adjusted for mode,
+    so e.g. mode="m4" without matching ring_settings/positions raises a
+    ValueError just as any other wrong count would.
+    """
+
+    rotor_order: tuple[str, ...] = DEFAULT_ROTORS
+    ring_settings: tuple[int, ...] = DEFAULT_RINGS
+    positions: str = DEFAULT_POSITIONS
+    reflector_name: str = ReflectorName.B.value
     plugboard_pairs: tuple[tuple[str, str], ...] = field(default_factory=tuple)
     greek_rotor: str = "BETA"
     mode: MachineModeName = MachineModeName.WEHRMACHT
 
     def __post_init__(self) -> None:
         """Validate and normalize fields identically for every construction path."""
-
-        if not isinstance(self.text, str):
-            raise ValueError("Text must be a string")
 
         mode = mode_name_for(self.mode)
 
@@ -143,93 +141,3 @@ class EnigmaConfig:
             reflector_name=self.reflector_name,
         )
         Plugboard(self.plugboard_pairs)
-
-
-class EnigmaConfigBuilder:
-    """Fluent builder that centralizes Enigma configuration validation."""
-
-    def __init__(self) -> None:
-        self._text = ""
-        self._mode: MachineModeName | str = MachineModeName.WEHRMACHT
-        self._rotor_order: Sequence[str] = DEFAULT_ROTORS
-        self._ring_settings: Sequence[int] | None = None
-        self._key = DEFAULT_POSITIONS
-        self._reflector_name: str | ReflectorName = ReflectorName.B
-        self._plugboard_pairs: Sequence[tuple[str, str]] = ()
-        self._greek_rotor: str | GreekRotorName = GreekRotorName.BETA
-
-    def text(self, value: str) -> EnigmaConfigBuilder:
-        """Set input text. Text is normalized to uppercase during build."""
-
-        self._text = value
-        return self
-
-    def mode(self, value: MachineModeName | str) -> EnigmaConfigBuilder:
-        """Set machine mode: wehrmacht, naval, or m4."""
-
-        self._mode = value
-        return self
-
-    def rotors(self, *rotor_order: str | Sequence[str]) -> EnigmaConfigBuilder:
-        """Set moving rotors left-to-right."""
-
-        self._rotor_order = self._unpack_sequence(rotor_order)
-        return self
-
-    def rings(self, *ring_settings: int | Sequence[int]) -> EnigmaConfigBuilder:
-        """Set one-based ring settings."""
-
-        self._ring_settings = self._unpack_sequence(ring_settings)
-        return self
-
-    def key(self, value: str) -> EnigmaConfigBuilder:
-        """Set initial rotor window positions."""
-
-        self._key = value
-        return self
-
-    def reflector(self, value: str | ReflectorName) -> EnigmaConfigBuilder:
-        """Set reflector name."""
-
-        self._reflector_name = value
-        return self
-
-    def plugboard(self, pairs: Sequence[tuple[str, str]] | None) -> EnigmaConfigBuilder:
-        """Set plugboard letter pairs."""
-
-        self._plugboard_pairs = pairs or ()
-        return self
-
-    def greek(self, value: str | GreekRotorName) -> EnigmaConfigBuilder:
-        """Set the fixed Greek rotor used by M4 mode."""
-
-        self._greek_rotor = value
-        return self
-
-    def build(self) -> EnigmaConfig:
-        """Validate and return an immutable configuration object."""
-
-        mode = mode_name_for(self._mode)
-        ring_settings = self._ring_settings
-        if ring_settings is None:
-            ring_settings = (
-                DEFAULT_M4_RINGS if MODE_SPECS[mode].rotor_count == 4 else DEFAULT_RINGS
-            )
-
-        return EnigmaConfig(
-            text=self._text.upper(),
-            rotor_order=tuple(self._rotor_order),
-            ring_settings=tuple(ring_settings),
-            positions=self._key,
-            reflector_name=self._reflector_name,
-            plugboard_pairs=tuple(self._plugboard_pairs),
-            greek_rotor=self._greek_rotor,
-            mode=mode,
-        )
-
-    @staticmethod
-    def _unpack_sequence(values: Iterable[T | Sequence[T]]) -> Sequence[T]:
-        values = tuple(values)
-        if len(values) == 1 and isinstance(values[0], (list, tuple)):
-            return cast(Sequence[T], values[0])
-        return cast(tuple[T, ...], values)

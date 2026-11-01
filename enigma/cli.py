@@ -6,8 +6,8 @@ from abc import ABC, abstractmethod
 from collections.abc import Sequence
 
 from .alphabet import DEFAULT_ROTORS, MOVING_ROTORS, is_base_letter
-from .config import EnigmaConfig, EnigmaConfigBuilder
-from .factory import EnigmaFactory
+from .config import EnigmaConfig
+from .machine import EnigmaMachine
 from .modes import MachineModeName, ReflectorName
 from .plugboard import normalize_pairs
 
@@ -94,11 +94,11 @@ def prompt_greek_rotor() -> str:
     raise ValueError("Greek rotor must be BETA or GAMMA")
 
 
-def process_config(config: EnigmaConfig) -> tuple[str, str]:
-    machine = EnigmaFactory().create(config)
-    window = machine.window()
-    output = machine.process_text(config.text)
-    return window, output
+def process_config(config: EnigmaConfig, text: str) -> tuple[str, str]:
+    """Build a fresh machine from config and process text through it once."""
+
+    machine = EnigmaMachine.from_config(config)
+    return machine.window(), machine.process_text(text)
 
 
 class CliCommand(ABC):
@@ -110,7 +110,6 @@ class CliCommand(ABC):
 
     def _build_config(
         self,
-        text: str,
         key: str,
         mode: MachineModeName,
         rotor_order: Sequence[str],
@@ -119,17 +118,14 @@ class CliCommand(ABC):
         plug_pairs: Sequence[tuple[str, str]],
         greek_rotor_name: str = "BETA",
     ) -> EnigmaConfig:
-        return (
-            EnigmaConfigBuilder()
-            .text(text)
-            .mode(mode)
-            .rotors(rotor_order)
-            .rings(ring_settings)
-            .key(key)
-            .reflector(reflector_name)
-            .plugboard(plug_pairs)
-            .greek(greek_rotor_name)
-            .build()
+        return EnigmaConfig(
+            rotor_order=tuple(rotor_order),
+            ring_settings=tuple(ring_settings),
+            positions=key,
+            reflector_name=reflector_name,
+            plugboard_pairs=tuple(plug_pairs),
+            greek_rotor=greek_rotor_name,
+            mode=mode,
         )
 
     def _round_trip(
@@ -143,9 +139,8 @@ class CliCommand(ABC):
         plug_pairs: Sequence[tuple[str, str]],
         greek_rotor_name: str = "BETA",
     ) -> tuple[str, str, str]:
-        """Encrypt and decrypt with the same initial machine settings."""
+        """Encrypt, then decrypt from the same initial rotor positions."""
         config = self._build_config(
-            text=text,
             key=key,
             mode=mode,
             rotor_order=rotor_order,
@@ -154,18 +149,11 @@ class CliCommand(ABC):
             plug_pairs=plug_pairs,
             greek_rotor_name=greek_rotor_name,
         )
-        window, encrypted = process_config(config)
-        decrypt_config = self._build_config(
-            text=encrypted,
-            key=key,
-            mode=mode,
-            rotor_order=rotor_order,
-            ring_settings=ring_settings,
-            reflector_name=reflector_name,
-            plug_pairs=plug_pairs,
-            greek_rotor_name=greek_rotor_name,
-        )
-        _, decrypted = process_config(decrypt_config)
+        machine = EnigmaMachine.from_config(config)
+        window = machine.window()
+        encrypted = machine.process_text(text)
+        machine.reset()
+        decrypted = machine.process_text(encrypted)
         return window, encrypted, decrypted
 
 
@@ -267,7 +255,6 @@ class DailyKeySheetCommand(CliCommand):
         )
 
         key_config = self._build_config(
-            text=message_key_encrypted,
             key=ground_setting,
             mode=MachineModeName.WEHRMACHT,
             rotor_order=rotor_order,
@@ -275,7 +262,7 @@ class DailyKeySheetCommand(CliCommand):
             reflector_name=reflector_name,
             plug_pairs=plug_pairs,
         )
-        _, message_key = process_config(key_config)
+        _, message_key = process_config(key_config, message_key_encrypted)
 
         text = input("\nEnter message to encrypt: ")[:MAX_MESSAGE_LENGTH]
         if not text:
