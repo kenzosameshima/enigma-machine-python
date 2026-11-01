@@ -5,6 +5,7 @@ from __future__ import annotations
 import unittest
 
 import pytest
+from helpers import ProcessArguments
 
 from enigma import enigma_process
 
@@ -108,7 +109,7 @@ def test_lowercase_input_is_normalized() -> None:
     ],
 )
 def test_index_conversion_refactor_preserves_known_outputs(
-    kwargs: dict[str, object],
+    kwargs: ProcessArguments,
     expected: str,
 ) -> None:
     assert enigma_process(**kwargs) == expected

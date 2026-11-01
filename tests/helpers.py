@@ -2,11 +2,14 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
+from typing import TypedDict
+
 from enigma.alphabet import letter_to_index
 from enigma.config import EnigmaConfig
 from enigma.data import ROTOR_SPECS
 from enigma.machine import EnigmaMachine
-from enigma.modes import MachineModeName
+from enigma.modes import MachineModeName, mode_name_for
 from enigma.rotors import Rotor, RotorState
 
 
@@ -45,6 +48,20 @@ def make_machine(  # noqa: PLR0913 -- one named setting per Enigma config field
         reflector_name=reflector_name,
         plugboard_pairs=plug_pairs,
         greek_rotor_name=greek_rotor_name,
-        mode=mode,
+        mode=mode_name_for(mode),
     )
     return EnigmaMachine.from_config(config)
+
+
+class RequiredProcessArguments(TypedDict):
+    text: str
+    key: str
+
+
+class ProcessArguments(RequiredProcessArguments, total=False):
+    mode: str
+    plug_pairs: Sequence[tuple[str, str]] | None
+    rotor_order: Sequence[str]
+    ring_settings: Sequence[int]
+    reflector_name: str
+    greek_rotor_name: str

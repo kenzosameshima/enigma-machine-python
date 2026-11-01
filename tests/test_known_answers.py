@@ -9,7 +9,10 @@ real Enigma machine (see test_engine.py for vectors that are).
 
 from __future__ import annotations
 
+from typing import cast
+
 import pytest
+from helpers import ProcessArguments
 
 from enigma import enigma_process
 
@@ -88,7 +91,7 @@ from enigma import enigma_process
     ],
 )
 def test_pinned_ciphertext_matches_current_implementation(
-    kwargs: dict[str, object],
+    kwargs: ProcessArguments,
     expected: str,
 ) -> None:
     assert enigma_process(**kwargs) == expected
@@ -153,10 +156,10 @@ def test_pinned_ciphertext_matches_current_implementation(
     ],
 )
 def test_pinned_ciphertext_round_trips_to_original_text(
-    kwargs: dict[str, object],
+    kwargs: ProcessArguments,
 ) -> None:
     encrypted = enigma_process(**kwargs)
-    decrypt_kwargs = dict(kwargs)
+    decrypt_kwargs = cast(ProcessArguments, dict(kwargs))
     decrypt_kwargs["text"] = encrypted
     decrypted = enigma_process(**decrypt_kwargs)
 
