@@ -89,11 +89,15 @@ class EnigmaMachine:
 
         if not isinstance(text, str):
             raise ValueError("Text must be a string")
-        return "".join(self.process_char(char) for char in text.upper())
+        return "".join(self.process_char(char) for char in text)
 
     def process_char(self, char: str) -> str:
-        """Process a single character, preserving non-A-Z characters."""
+        """Normalize ASCII letters and preserve every other single character."""
 
+        if not isinstance(char, str) or len(char) != 1:
+            raise ValueError("Character must be a single character")
+        if "a" <= char <= "z":
+            char = char.upper()
         if char not in BASE:
             return char
 

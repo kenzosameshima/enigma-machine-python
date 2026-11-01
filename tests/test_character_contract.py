@@ -4,7 +4,6 @@ import pytest
 from helpers import make_machine
 
 
-@pytest.mark.xfail(strict=True, reason="Unicode normalization bug awaiting fix")
 @pytest.mark.parametrize("text", ["ß", "ﬃ", "\u0131", "é", "aßz"])
 def test_only_ascii_letters_are_normalized_and_step(text: str) -> None:
     machine = make_machine()
@@ -20,7 +19,6 @@ def test_only_ascii_letters_are_normalized_and_step(text: str) -> None:
     assert len(expected) == len(text)
 
 
-@pytest.mark.xfail(strict=True, reason="Character validation bug awaiting fix")
 @pytest.mark.parametrize("char", ["", "AB", "!?", None, 1, ["A"]])
 def test_invalid_character_is_rejected_without_stepping(char: object) -> None:
     machine = make_machine(key="ADV")
@@ -32,7 +30,6 @@ def test_invalid_character_is_rejected_without_stepping(char: object) -> None:
         assert tuple(rotor.snapshot() for rotor in machine.rotors) == before
 
 
-@pytest.mark.xfail(strict=True, reason="ASCII normalization awaiting fix")
 def test_process_char_normalizes_ascii_lowercase() -> None:
     machine = make_machine()
     assert machine.process_char("a") == make_machine().process_char("A")
