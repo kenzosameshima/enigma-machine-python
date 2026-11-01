@@ -1,15 +1,11 @@
-"""Machine mode strategies and mode-specific validation."""
+"""Machine mode definitions and mode-specific validation."""
 
 from __future__ import annotations
 
-from abc import ABC, abstractmethod
+from dataclasses import dataclass
 from enum import Enum
-from typing import TYPE_CHECKING
 
 from .alphabet import GREEK_ROTORS
-
-if TYPE_CHECKING:
-    from .config import EnigmaConfig
 
 
 class MachineModeName(str, Enum):
@@ -40,91 +36,81 @@ THREE_ROTOR_REFLECTORS = frozenset({ReflectorName.B.value, ReflectorName.C.value
 M4_REFLECTORS = frozenset({ReflectorName.B_THIN.value, ReflectorName.C_THIN.value})
 
 
-class MachineMode(ABC):
-    """Strategy for mode-specific validation and sizing rules."""
+@dataclass(frozen=True)
+class ModeSpec:
+    """Sizing and reflector rules for one machine mode."""
 
-    name: MachineModeName
-
-    @abstractmethod
-    def validate(self, config: EnigmaConfig) -> None:
-        """Validate mode-specific configuration."""
-
-    @abstractmethod
-    def rotor_count(self) -> int:
-        """Return the number of positions displayed by this mode."""
-
-    @abstractmethod
-    def moving_rotor_count(self) -> int:
-        """Return the number of stepping rotors."""
+    label: str
+    rotor_count: int
+    moving_rotor_count: int
+    allowed_reflectors: frozenset[str]
+    reflector_description: str
+    requires_greek: bool
 
 
-class ThreeRotorMode(MachineMode):
-    """Strategy for Wehrmacht/Naval three-rotor machines."""
-
-    def __init__(self, name: MachineModeName = MachineModeName.WEHRMACHT) -> None:
-        self.name = name
-
-    def validate(self, config: EnigmaConfig) -> None:
-        if len(config.rotor_order) != self.moving_rotor_count():
-            raise ValueError("3-rotor mode requires 3 rotor names")
-        if len(config.ring_settings) != self.rotor_count():
-            raise ValueError("3-rotor mode requires 3 ring settings")
-        if len(config.positions) != self.rotor_count():
-            raise ValueError("3-rotor mode requires 3 rotor positions")
-        if config.reflector_name not in THREE_ROTOR_REFLECTORS:
-            raise ValueError("3-rotor mode uses reflector B or C")
-
-    def rotor_count(self) -> int:
-        return 3
-
-    def moving_rotor_count(self) -> int:
-        return 3
-
-
-class M4Mode(MachineMode):
-    """Strategy for Naval M4 machines."""
-
-    name = MachineModeName.M4
-
-    def validate(self, config: EnigmaConfig) -> None:
-        if len(config.rotor_order) != self.moving_rotor_count():
-            raise ValueError("M4 requires 3 moving rotor names")
-        if len(config.ring_settings) != self.rotor_count():
-            raise ValueError("M4 requires 4 ring settings")
-        if len(config.positions) != self.rotor_count():
-            raise ValueError("M4 requires 4 rotor positions")
-        if config.reflector_name not in M4_REFLECTORS:
-            raise ValueError("M4 uses thin reflectors: B_THIN or C_THIN")
-        if config.greek_rotor not in GREEK_ROTORS:
-            raise ValueError("M4 requires Greek rotor BETA or GAMMA")
-
-    def rotor_count(self) -> int:
-        return 4
-
-    def moving_rotor_count(self) -> int:
-        return 3
+MODE_SPECS: dict[MachineModeName, ModeSpec] = {
+    MachineModeName.WEHRMACHT: ModeSpec(
+        label="3-rotor mode",
+        rotor_count=3,
+        moving_rotor_count=3,
+        allowed_reflectors=THREE_ROTOR_REFLECTORS,
+        reflector_description="reflector B or C",
+        requires_greek=False,
+    ),
+    MachineModeName.NAVAL: ModeSpec(
+        label="3-rotor mode",
+        rotor_count=3,
+        moving_rotor_count=3,
+        allowed_reflectors=THREE_ROTOR_REFLECTORS,
+        reflector_description="reflector B or C",
+        requires_greek=False,
+    ),
+    MachineModeName.M4: ModeSpec(
+        label="M4",
+        rotor_count=4,
+        moving_rotor_count=3,
+        allowed_reflectors=M4_REFLECTORS,
+        reflector_description="thin reflectors: B_THIN or C_THIN",
+        requires_greek=True,
+    ),
+}
 
 
-def mode_strategy_for(mode: MachineModeName | str | MachineMode) -> MachineMode:
-    """Create a mode strategy from a mode name or return an existing strategy."""
-
-    if isinstance(mode, MachineMode):
-        return mode
+def mode_name_for(mode: MachineModeName | str) -> MachineModeName:
+    """Normalize a mode name string or return an existing MachineModeName."""
 
     if isinstance(mode, MachineModeName):
-        normalized = mode
-    else:
-        try:
-            normalized = MachineModeName(str(mode).lower())
-        except ValueError as exc:
-            supported = ", ".join(sorted(item.value for item in MachineModeName))
-            raise ValueError(
-                f"Unsupported machine mode: {mode}. Supported modes: {supported}"
-            ) from exc
+        return mode
 
-    strategies = {
-        MachineModeName.WEHRMACHT: ThreeRotorMode(MachineModeName.WEHRMACHT),
-        MachineModeName.NAVAL: ThreeRotorMode(MachineModeName.NAVAL),
-        MachineModeName.M4: M4Mode(),
-    }
-    return strategies[normalized]
+    try:
+        return MachineModeName(str(mode).lower())
+    except ValueError as exc:
+        supported = ", ".join(sorted(item.value for item in MachineModeName))
+        raise ValueError(
+            f"Unsupported machine mode: {mode}. Supported modes: {supported}"
+        ) from exc
+
+
+def validate_mode(
+    mode: MachineModeName,
+    *,
+    rotor_order: tuple[str, ...],
+    ring_settings: tuple[int, ...],
+    reflector_name: str,
+    greek_rotor: str,
+) -> None:
+    """Validate rotor/ring counts and reflector choice for mode.
+
+    Rotor position length is already guaranteed by key normalization, which
+    runs before this check and sizes to the same mode's rotor_count.
+    """
+
+    spec = MODE_SPECS[mode]
+    if len(rotor_order) != spec.moving_rotor_count:
+        raise ValueError(f"{spec.label} requires {spec.moving_rotor_count} rotor names")
+    if len(ring_settings) != spec.rotor_count:
+        raise ValueError(f"{spec.label} requires {spec.rotor_count} ring settings")
+    if reflector_name not in spec.allowed_reflectors:
+        raise ValueError(f"{spec.label} uses {spec.reflector_description}")
+    if spec.requires_greek and greek_rotor not in GREEK_ROTORS:
+        raise ValueError(f"{spec.label} requires Greek rotor BETA or GAMMA")

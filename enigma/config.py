@@ -16,12 +16,12 @@ from .alphabet import (
 )
 from .data import REFLECTORS, ROTOR_SPECS
 from .modes import (
+    MODE_SPECS,
     GreekRotorName,
-    MachineMode,
     MachineModeName,
     ReflectorName,
-    ThreeRotorMode,
-    mode_strategy_for,
+    mode_name_for,
+    validate_mode,
 )
 from .plugboard import Plugboard
 
@@ -93,13 +93,7 @@ class EnigmaConfig:
     reflector_name: str
     plugboard_pairs: tuple[tuple[str, str], ...] = field(default_factory=tuple)
     greek_rotor: str = "BETA"
-    mode_strategy: MachineMode = field(default_factory=ThreeRotorMode)
-
-    @property
-    def mode(self) -> MachineModeName:
-        """The configured mode name, read from mode_strategy."""
-
-        return self.mode_strategy.name
+    mode: MachineModeName = MachineModeName.WEHRMACHT
 
     def __post_init__(self) -> None:
         """Validate and normalize fields identically for every construction path."""
@@ -107,10 +101,9 @@ class EnigmaConfig:
         if not isinstance(self.text, str):
             raise ValueError("Text must be a string")
 
-        strategy = self.mode_strategy
-        if not isinstance(strategy, MachineMode):
-            raise ValueError("mode_strategy must be a MachineMode instance")
+        mode = mode_name_for(self.mode)
 
+        object.__setattr__(self, "mode", mode)
         object.__setattr__(
             self, "rotor_order", _validate_moving_rotors(self.rotor_order)
         )
@@ -120,7 +113,7 @@ class EnigmaConfig:
         object.__setattr__(
             self,
             "positions",
-            _normalize_key_positions(self.positions, strategy.rotor_count()),
+            _normalize_key_positions(self.positions, MODE_SPECS[mode].rotor_count),
         )
         object.__setattr__(
             self, "reflector_name", _normalize_reflector_name(self.reflector_name)
@@ -135,7 +128,13 @@ class EnigmaConfig:
         )
 
         _validate_reflector_and_greek(self)
-        strategy.validate(self)
+        validate_mode(
+            mode,
+            rotor_order=self.rotor_order,
+            ring_settings=self.ring_settings,
+            reflector_name=self.reflector_name,
+            greek_rotor=self.greek_rotor,
+        )
         Plugboard(self.plugboard_pairs)
 
 
@@ -144,7 +143,7 @@ class EnigmaConfigBuilder:
 
     def __init__(self) -> None:
         self._text = ""
-        self._mode: MachineModeName | str | MachineMode = MachineModeName.WEHRMACHT
+        self._mode: MachineModeName | str = MachineModeName.WEHRMACHT
         self._rotor_order: Sequence[str] = DEFAULT_ROTORS
         self._ring_settings: Sequence[int] | None = None
         self._key = DEFAULT_POSITIONS
@@ -158,8 +157,8 @@ class EnigmaConfigBuilder:
         self._text = value
         return self
 
-    def mode(self, value: MachineModeName | str | MachineMode) -> EnigmaConfigBuilder:
-        """Set machine mode: wehrmacht, naval, m4, or a mode strategy."""
+    def mode(self, value: MachineModeName | str) -> EnigmaConfigBuilder:
+        """Set machine mode: wehrmacht, naval, or m4."""
 
         self._mode = value
         return self
@@ -203,11 +202,11 @@ class EnigmaConfigBuilder:
     def build(self) -> EnigmaConfig:
         """Validate and return an immutable configuration object."""
 
-        strategy = mode_strategy_for(self._mode)
+        mode = mode_name_for(self._mode)
         ring_settings = self._ring_settings
         if ring_settings is None:
             ring_settings = (
-                DEFAULT_M4_RINGS if strategy.rotor_count() == 4 else DEFAULT_RINGS
+                DEFAULT_M4_RINGS if MODE_SPECS[mode].rotor_count == 4 else DEFAULT_RINGS
             )
 
         return EnigmaConfig(
@@ -218,7 +217,7 @@ class EnigmaConfigBuilder:
             reflector_name=self._reflector_name,
             plugboard_pairs=tuple(self._plugboard_pairs),
             greek_rotor=self._greek_rotor,
-            mode_strategy=strategy,
+            mode=mode,
         )
 
     @staticmethod

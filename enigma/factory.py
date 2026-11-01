@@ -6,6 +6,7 @@ from .alphabet import letter_to_index
 from .config import EnigmaConfig
 from .data import ROTOR_SPECS
 from .machine import EnigmaMachine
+from .modes import MODE_SPECS, validate_mode
 from .plugboard import Plugboard
 from .rotors import Rotor, RotorState
 
@@ -16,12 +17,18 @@ class EnigmaFactory:
     def create(self, config: EnigmaConfig) -> EnigmaMachine:
         """Validate config and return a fresh machine with isolated rotor state."""
 
-        config.mode_strategy.validate(config)
+        validate_mode(
+            config.mode,
+            rotor_order=config.rotor_order,
+            ring_settings=config.ring_settings,
+            reflector_name=config.reflector_name,
+            greek_rotor=config.greek_rotor,
+        )
         creators = {
             3: self._create_three_rotor,
             4: self._create_m4,
         }
-        return creators[config.mode_strategy.rotor_count()](config)
+        return creators[MODE_SPECS[config.mode].rotor_count](config)
 
     def _create_three_rotor(self, config: EnigmaConfig) -> EnigmaMachine:
         return EnigmaMachine(

@@ -11,7 +11,6 @@ from enigma import (
     MachineModeName,
     enigma_process,
 )
-from enigma.modes import M4Mode
 
 
 def make_machine(
@@ -108,25 +107,29 @@ def test_builder_creates_machine_with_expected_window() -> None:
     assert machine.window() == "ABC"
 
 
-def test_config_mode_is_read_from_mode_strategy() -> None:
-    three_rotor = EnigmaConfig(
+def test_config_mode_defaults_to_wehrmacht() -> None:
+    config = EnigmaConfig(
         text="",
         rotor_order=("I", "II", "III"),
         ring_settings=(1, 1, 1),
         positions="AAA",
         reflector_name="B",
     )
-    m4 = EnigmaConfig(
+
+    assert config.mode == MachineModeName.WEHRMACHT
+
+
+def test_config_mode_accepts_explicit_value() -> None:
+    config = EnigmaConfig(
         text="",
         rotor_order=("I", "II", "III"),
         ring_settings=(1, 1, 1, 1),
         positions="AAAA",
         reflector_name="B_THIN",
-        mode_strategy=M4Mode(),
+        mode=MachineModeName.M4,
     )
 
-    assert three_rotor.mode == MachineModeName.WEHRMACHT
-    assert m4.mode == MachineModeName.M4
+    assert config.mode == MachineModeName.M4
 
 
 def test_direct_config_normalizes_mutable_containers_to_hashable_tuples() -> None:
