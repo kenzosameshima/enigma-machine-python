@@ -7,6 +7,7 @@ from collections.abc import Sequence
 from .alphabet import (
     BASE,
     GREEK_ROTORS,
+    ascii_upper,
     index_to_letter,
     letter_to_index,
     validate_moving_rotor_names,
@@ -96,8 +97,7 @@ class EnigmaMachine:
 
         if not isinstance(char, str) or len(char) != 1:
             raise ValueError("Character must be a single character")
-        if "a" <= char <= "z":
-            char = char.upper()
+        char = ascii_upper(char)
         if char not in BASE:
             return char
 

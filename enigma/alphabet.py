@@ -13,6 +13,12 @@ MOVING_ROTORS = frozenset({"I", "II", "III", "IV", "V"})
 GREEK_ROTORS = frozenset({"BETA", "GAMMA"})
 
 
+def ascii_upper(text: str) -> str:
+    """Uppercase ASCII a-z, preserving every other character exactly."""
+
+    return "".join(char.upper() if "a" <= char <= "z" else char for char in text)
+
+
 def is_base_letter(char: str) -> bool:
     """Return whether char is one of the supported A-Z letters."""
 

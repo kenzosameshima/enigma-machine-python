@@ -10,6 +10,7 @@ from .alphabet import (
     DEFAULT_RINGS,
     DEFAULT_ROTORS,
     GREEK_ROTORS,
+    ascii_upper,
     is_base_letter,
     validate_moving_rotor_names,
 )
@@ -27,8 +28,10 @@ from .plugboard import Plugboard
 def _normalize_key_positions(key: str, rotor_count: int) -> str:
     if not isinstance(key, str):
         raise ValueError("Key must be text containing rotor position letters")
-    normalized = "".join(ch for ch in key.upper() if is_base_letter(ch))
-    if len(normalized) != rotor_count:
+    normalized = ascii_upper(key.strip())
+    if len(normalized) != rotor_count or not all(
+        is_base_letter(char) for char in normalized
+    ):
         raise ValueError(f"Key must contain exactly {rotor_count} letters")
     return normalized
 

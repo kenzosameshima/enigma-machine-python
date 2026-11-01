@@ -18,7 +18,6 @@ def test_invalid_plug_letter_retains_exact_message(letter: str, side: int) -> No
         normalize_pair(pair)
 
 
-@pytest.mark.xfail(strict=True, reason="Strict ASCII pair validation awaiting fix")
 @pytest.mark.parametrize("letter", ["\u0131", "\u017f"])
 @pytest.mark.parametrize("side", [0, 1])
 def test_plugboard_rejects_unicode_case_aliases(letter: str, side: int) -> None:
@@ -29,7 +28,6 @@ def test_plugboard_rejects_unicode_case_aliases(letter: str, side: int) -> None:
         normalize_pair(pair)
 
 
-@pytest.mark.xfail(strict=True, reason="Strict ASCII key validation awaiting fix")
 @pytest.mark.parametrize(
     "key",
     [

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 
-from .alphabet import is_base_letter
+from .alphabet import ascii_upper, is_base_letter
 
 
 class Plugboard:
@@ -55,8 +55,8 @@ def normalize_pair(pair: object) -> tuple[str, str]:
     if not isinstance(first, str) or not isinstance(second, str):
         raise ValueError("Plugboard pair values must be letters")
 
-    a = first.upper()
-    b = second.upper()
+    a = ascii_upper(first)
+    b = ascii_upper(second)
     if not is_base_letter(a) or not is_base_letter(b):
         raise ValueError(f"Invalid plugboard pair: {first}-{second}")
     return a, b
