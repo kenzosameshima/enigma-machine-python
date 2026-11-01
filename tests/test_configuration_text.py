@@ -4,7 +4,7 @@ import re
 
 import pytest
 
-from enigma import EnigmaConfig, MachineModeName
+from enigma import EnigmaConfig, MachineModeName, Plugboard
 from enigma.plugboard import normalize_pair
 
 
@@ -76,3 +76,14 @@ def test_key_strips_only_surrounding_whitespace(count: int, padding: str) -> Non
 def test_single_unicode_key_still_fails_normalized_length(key: str) -> None:
     with pytest.raises(ValueError, match=r"^Key must contain exactly 3 letters$"):
         EnigmaConfig(key=key)
+
+
+@pytest.mark.parametrize("first", ["A", "a"])
+@pytest.mark.parametrize("second", ["A", "a"])
+def test_plugboard_rejects_repeated_letter_after_normalization(
+    first: str, second: str
+) -> None:
+    with pytest.raises(
+        ValueError, match=r"^Plugboard pair cannot repeat a letter: A-A$"
+    ):
+        Plugboard([(first, second)])
