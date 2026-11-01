@@ -125,25 +125,23 @@ decrypted = enigma_process(
 assert decrypted == "HELLO WORLD"
 ```
 
-Factory-based usage:
+Direct construction, for reusing one machine across several calls:
 
 ```python
-from enigma import EnigmaConfigBuilder, EnigmaFactory
+from enigma import EnigmaConfig, EnigmaMachine
 
-config = (
-    EnigmaConfigBuilder()
-    .text("ATTACK AT DAWN")
-    .mode("wehrmacht")
-    .rotors("I", "II", "III")
-    .rings(1, 1, 1)
-    .key("ABC")
-    .reflector("B")
-    .plugboard([("A", "B"), ("C", "D")])
-    .build()
+config = EnigmaConfig(
+    rotor_order=("I", "II", "III"),
+    ring_settings=(1, 1, 1),
+    key="ABC",
+    reflector_name="B",
+    plugboard_pairs=[("A", "B"), ("C", "D")],
 )
 
-machine = EnigmaFactory().create(config)
-ciphertext = machine.process_text(config.text)
+machine = EnigmaMachine.from_config(config)
+ciphertext = machine.process_text("ATTACK AT DAWN")
+
+machine.reset()  # rewind to the initial rotor positions
 ```
 
 ## Public API Contract
@@ -152,8 +150,7 @@ The supported public API is:
 
 - `enigma.enigma_process`
 - `enigma.EnigmaConfig`
-- `enigma.EnigmaConfigBuilder`
-- `enigma.EnigmaFactory`
+- `enigma.EnigmaMachine`
 - `enigma.MachineModeName`
 - `enigma.ReflectorName`
 - `enigma.GreekRotorName`
@@ -167,13 +164,15 @@ numbers, and advances rotors only for A-Z characters.
 Invalid user configuration raises `ValueError`. Expected validation failures
 include unsupported modes, invalid rotor names, repeated moving rotors, ring
 settings outside 1-26, incorrectly sized keys, incompatible reflectors, invalid
-Greek rotors, and invalid plugboard pairs.
+Greek rotors, and invalid plugboard pairs. `EnigmaConfig` validates every field
+in `__post_init__`, on every construction path.
 
-`EnigmaFactory.create()` returns a fresh `EnigmaMachine` with isolated rotor
-state. Directly constructed `EnigmaMachine` instances defensively copy rotor
-objects by default. This prevents accidental state sharing between machines.
-Compatibility helpers that historically mutate external rotor objects preserve
-their previous behavior.
+`EnigmaMachine.from_config()` returns a fresh machine built from an
+already-validated `EnigmaConfig`. Construction — through `from_config` or by
+calling `EnigmaMachine()` directly — always defensively clones the rotors
+passed in, so separate machines never share stepping state, even when built
+from the same `Rotor` objects. Call `machine.reset()` to rewind a machine to
+the rotor positions it was constructed with, without building a new one.
 
 ## Supported Modes
 
@@ -196,7 +195,7 @@ M4 mode:
 Moving rotors are selected left-to-right:
 
 ```python
-rotor_order=("I", "II", "III")
+rotor_order = ("I", "II", "III")
 ```
 
 Supported moving rotors are `I`, `II`, `III`, `IV`, and `V`. A moving rotor
@@ -207,7 +206,7 @@ cannot be repeated in the same configuration.
 Ring settings are one-based integers from 1 to 26:
 
 ```python
-ring_settings=(1, 14, 26)
+ring_settings = (1, 14, 26)
 ```
 
 Three-rotor modes require three ring settings. M4 requires four ring settings:
@@ -218,7 +217,7 @@ three for the moving rotors and one for the Greek rotor.
 The `key` argument sets the starting window positions:
 
 ```python
-key="ABC"
+key = "ABC"
 ```
 
 Three-rotor modes require three letters. M4 requires four letters. Input text is
@@ -230,7 +229,7 @@ preserved and do not advance rotors.
 Plugboard pairs are bidirectional:
 
 ```python
-plug_pairs=[("A", "B"), ("C", "D")]
+plug_pairs = [("A", "B"), ("C", "D")]
 ```
 
 Rules:
@@ -366,6 +365,7 @@ Before tagging a release:
 git status
 python3 -m pytest
 python3 -m ruff check enigma tests
+python3 -m ruff format .
 python3 -m mypy enigma
 ```
 

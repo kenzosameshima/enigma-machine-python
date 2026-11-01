@@ -1,5 +1,55 @@
 # Changelog
 
+## Unreleased
+
+Internal refactor for simplicity and consistency with PEP 20. Cipher output
+is unchanged throughout, pinned by `tests/test_known_answers.py` across
+wehrmacht, naval, and M4 configurations.
+
+### Breaking changes
+
+- Removed `EnigmaConfigBuilder` and `EnigmaFactory`. Build settings directly
+  with `EnigmaConfig(...)` and construct a machine with
+  `EnigmaMachine.from_config(config)`.
+- Removed `text` from `EnigmaConfig`. Pass text to `machine.process_text(text)`
+  or `enigma_process(text=...)` instead; `enigma_process`'s signature is
+  unchanged.
+- Renamed `EnigmaConfig.positions` to `key` and `EnigmaConfig.greek_rotor` to
+  `greek_rotor_name`, matching `enigma_process`'s own parameter names.
+- `RotorState` is now an immutable (frozen) dataclass; construct a new
+  instance instead of mutating `ring`/`position` in place.
+- Removed the `copy_rotors` parameter from `EnigmaMachine.__init__`.
+  Construction always defensively clones the rotors passed in.
+- An invalid `greek_rotor_name` now raises `ValueError` in every mode, not
+  only M4. Three-rotor mode previously accepted any name in `ROTOR_SPECS`
+  (including non-Greek rotors) for a field it never uses.
+- Removed `MachineMode`, `ThreeRotorMode`, `M4Mode`, and `mode_strategy_for`
+  from `enigma.modes`, replaced by data-driven `ModeSpec`/`MODE_SPECS` and a
+  `validate_mode()` function.
+- Removed `enigma.engine.step_rotors` (pure backward-compatibility wrapper,
+  no remaining callers).
+- Moved `normalize_pairs` from `enigma.engine` to `enigma.plugboard`.
+
+### Added
+
+- `EnigmaMachine.from_config(config)` as the machine construction entry
+  point.
+- `Rotor.clone()`, `Rotor.snapshot()`, and `Rotor.restore()`, replacing
+  `machine.py`'s module-level `_clone_rotor`/`_snapshot_*`/`_restore_*`
+  helpers.
+- `tests/test_known_answers.py`, pinning ciphertext across non-default ring
+  settings, plugboards, multi-turnover and double-step message lengths, and
+  non-letter characters.
+
+### Changed
+
+- `EnigmaMachine` folds the Greek rotor into its rotor list (physical order,
+  Greek first) instead of tracking it separately; `encode_signal` and
+  `reset` loop over it uniformly with no `is not None` branching.
+- The CLI builds one `EnigmaConfig` and one machine per command, encrypting
+  then calling `machine.reset()` before decrypting, instead of building a
+  second config and machine from scratch for the decrypt pass.
+
 ## 0.2.2-alpha
 
 ### Added
