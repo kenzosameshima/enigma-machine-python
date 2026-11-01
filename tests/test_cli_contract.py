@@ -158,3 +158,15 @@ def test_cli_normalizes_names_and_separators(monkeypatch: pytest.MonkeyPatch) ->
     assert cli.prompt_ring_settings(3) == (1, 26, 2)
     assert cli.prompt_plugboard() == (("A", "Z"), ("B", "Y"))
     assert cli.prompt_greek_rotor() == "GAMMA"
+
+
+@pytest.mark.xfail(strict=True, reason="CLI must preserve input until ASCII validation")
+@pytest.mark.parametrize("pair", ["\u0131Z", "\u017fZ", "Z\u0131", "Z\u017f"])
+def test_cli_rejects_unicode_plug_aliases(
+    pair: str, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    feed(monkeypatch, [pair])
+    with pytest.raises(
+        ValueError, match=f"^Invalid plugboard pair: {re.escape(pair)}$"
+    ):
+        cli.prompt_plugboard()
