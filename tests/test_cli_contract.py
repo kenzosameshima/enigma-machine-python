@@ -169,3 +169,32 @@ def test_cli_rejects_unicode_plug_aliases(
         ValueError, match=f"^Invalid plugboard pair: {re.escape(pair)}$"
     ):
         cli.prompt_plugboard()
+
+
+@pytest.mark.parametrize(
+    ("prompt", "answer", "message"),
+    [
+        (
+            cli.prompt_rotor_order,
+            "\u0131 II III",
+            "Rotor order must use I, II, III, IV, or V",
+        ),
+        (
+            lambda: cli.prompt_reflector(
+                "Reflector: ", ReflectorName.B, {ReflectorName.B, ReflectorName.C}
+            ),
+            "\u017f",
+            "Reflector must be one of: B, C",
+        ),
+        (cli.prompt_greek_rotor, "\u00df", "Greek rotor must be BETA or GAMMA"),
+    ],
+)
+def test_prompt_rejects_unicode_case_aliases(
+    prompt: Callable[[], object],
+    answer: str,
+    message: str,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    feed(monkeypatch, [answer])
+    with pytest.raises(ValueError, match=f"^{re.escape(message)}$"):
+        prompt()

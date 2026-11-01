@@ -87,3 +87,23 @@ def test_plugboard_rejects_repeated_letter_after_normalization(
         ValueError, match=r"^Plugboard pair cannot repeat a letter: A-A$"
     ):
         Plugboard([(first, second)])
+
+
+@pytest.mark.parametrize("name", [chr(0x0131), chr(0x017F), chr(0x00DF)])
+def test_rotor_order_rejects_unicode_case_aliases(name: str) -> None:
+    with pytest.raises(
+        ValueError, match=r"^Moving rotors must be selected from I, II, III, IV, V$"
+    ):
+        EnigmaConfig(rotor_order=(name, "II", "III"))
+
+
+@pytest.mark.parametrize("name", [chr(0x0131), chr(0x017F), chr(0x00DF)])
+def test_reflector_name_rejects_unicode_case_aliases(name: str) -> None:
+    with pytest.raises(ValueError, match=f"^Unknown reflector: {re.escape(name)}$"):
+        EnigmaConfig(reflector_name=name)
+
+
+@pytest.mark.parametrize("name", [chr(0x0131), chr(0x017F), chr(0x00DF)])
+def test_greek_rotor_name_rejects_unicode_case_aliases(name: str) -> None:
+    with pytest.raises(ValueError, match=f"^Unknown Greek rotor: {re.escape(name)}$"):
+        EnigmaConfig(greek_rotor_name=name)
