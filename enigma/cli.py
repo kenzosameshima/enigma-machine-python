@@ -5,25 +5,25 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from collections.abc import Sequence
 
-from .alphabet import is_base_letter
-from .config import EnigmaConfig, EnigmaConfigBuilder
-from .engine import normalize_pairs
-from .factory import EnigmaFactory
+from .alphabet import DEFAULT_ROTORS, MOVING_ROTORS, ascii_upper, is_base_letter
+from .config import EnigmaConfig
+from .machine import EnigmaMachine
 from .modes import MachineModeName, ReflectorName
+from .plugboard import normalize_pairs
 
 MAX_MESSAGE_LENGTH = 128
-DEFAULT_ROTOR_ORDER = ("I", "II", "III")
-MOVING_ROTORS = {"I", "II", "III", "IV", "V"}
 
 
 def prompt_rotor_order() -> tuple[str, str, str]:
     print("Available moving rotors: I II III IV V")
-    raw = input("Enter rotor order left-to-right (e.g. I II III): ").strip().upper()
+    raw = ascii_upper(
+        input("Enter rotor order left-to-right (e.g. I II III): ").strip()
+    )
     parts = tuple(part for part in raw.replace(",", " ").split() if part)
 
     if not parts:
         print("Using default rotor order I II III.")
-        return DEFAULT_ROTOR_ORDER
+        return DEFAULT_ROTORS
     if len(parts) != 3:
         raise ValueError("Rotor order must contain exactly 3 moving rotors")
     if any(part not in MOVING_ROTORS for part in parts):
@@ -56,7 +56,9 @@ def prompt_ring_settings(count: int) -> tuple[int, ...]:
 
 
 def prompt_plugboard() -> tuple[tuple[str, str], ...]:
-    raw = input("Plugboard pairs (e.g. AB CD EF), blank for none: ").strip().upper()
+    raw = ascii_upper(
+        input("Plugboard pairs (e.g. AB CD EF), blank for none: ").strip()
+    )
     if not raw:
         return ()
 
@@ -77,7 +79,7 @@ def prompt_reflector(
     default: ReflectorName,
     allowed: set[ReflectorName],
 ) -> str:
-    raw = input(prompt).strip().upper()
+    raw = ascii_upper(input(prompt).strip())
     reflector = raw or default.value
     if reflector not in {item.value for item in allowed}:
         raise ValueError(
@@ -88,7 +90,7 @@ def prompt_reflector(
 
 
 def prompt_greek_rotor() -> str:
-    raw = input("Greek rotor (BETA/GAMMA, default BETA): ").strip().upper()
+    raw = ascii_upper(input("Greek rotor (BETA/GAMMA, default BETA): ").strip())
     if not raw:
         return "BETA"
     if raw in {"BETA", "GAMMA"}:
@@ -96,11 +98,11 @@ def prompt_greek_rotor() -> str:
     raise ValueError("Greek rotor must be BETA or GAMMA")
 
 
-def process_config(config: EnigmaConfig) -> tuple[str, str]:
-    machine = EnigmaFactory().create(config)
-    window = machine.window()
-    output = machine.process_text(config.text)
-    return window, output
+def process_config(config: EnigmaConfig, text: str) -> tuple[str, str]:
+    """Build a fresh machine from config and process text through it once."""
+
+    machine = EnigmaMachine.from_config(config)
+    return machine.window(), machine.process_text(text)
 
 
 class CliCommand(ABC):
@@ -110,9 +112,9 @@ class CliCommand(ABC):
     def execute(self) -> str:
         """Collect input, run a machine, and return display text."""
 
-    def _build_config(
+    def _build_config(  # noqa: PLR0913 -- one named setting per Enigma config field
         self,
-        text: str,
+        *,
         key: str,
         mode: MachineModeName,
         rotor_order: Sequence[str],
@@ -121,18 +123,44 @@ class CliCommand(ABC):
         plug_pairs: Sequence[tuple[str, str]],
         greek_rotor_name: str = "BETA",
     ) -> EnigmaConfig:
-        return (
-            EnigmaConfigBuilder()
-            .text(text)
-            .mode(mode)
-            .rotors(rotor_order)
-            .rings(ring_settings)
-            .key(key)
-            .reflector(reflector_name)
-            .plugboard(plug_pairs)
-            .greek(greek_rotor_name)
-            .build()
+        return EnigmaConfig(
+            rotor_order=tuple(rotor_order),
+            ring_settings=tuple(ring_settings),
+            key=key,
+            reflector_name=reflector_name,
+            plugboard_pairs=tuple(plug_pairs),
+            greek_rotor_name=greek_rotor_name,
+            mode=mode,
         )
+
+    def _round_trip(  # noqa: PLR0913 -- one named setting per Enigma config field
+        self,
+        *,
+        text: str,
+        key: str,
+        mode: MachineModeName,
+        rotor_order: Sequence[str],
+        ring_settings: Sequence[int],
+        reflector_name: str,
+        plug_pairs: Sequence[tuple[str, str]],
+        greek_rotor_name: str = "BETA",
+    ) -> tuple[str, str, str]:
+        """Encrypt, then decrypt from the same initial rotor positions."""
+        config = self._build_config(
+            key=key,
+            mode=mode,
+            rotor_order=rotor_order,
+            ring_settings=ring_settings,
+            reflector_name=reflector_name,
+            plug_pairs=plug_pairs,
+            greek_rotor_name=greek_rotor_name,
+        )
+        machine = EnigmaMachine.from_config(config)
+        window = machine.window()
+        encrypted = machine.process_text(text)
+        machine.reset()
+        decrypted = machine.process_text(encrypted)
+        return window, encrypted, decrypted
 
 
 class ThreeRotorCommand(CliCommand):
@@ -158,7 +186,7 @@ class ThreeRotorCommand(CliCommand):
         )
         plug_pairs = prompt_plugboard()
 
-        config = self._build_config(
+        window, encrypted, decrypted = self._round_trip(
             text=text,
             key=key,
             mode=self.mode,
@@ -167,17 +195,6 @@ class ThreeRotorCommand(CliCommand):
             reflector_name=reflector_name,
             plug_pairs=plug_pairs,
         )
-        window, encrypted = process_config(config)
-        decrypt_config = self._build_config(
-            text=encrypted,
-            key=key,
-            mode=self.mode,
-            rotor_order=rotor_order,
-            ring_settings=ring_settings,
-            reflector_name=reflector_name,
-            plug_pairs=plug_pairs,
-        )
-        _, decrypted = process_config(decrypt_config)
         return (
             f"\nRotor window: [{window}]\n"
             f"Encrypted:  {encrypted}\n"
@@ -201,7 +218,7 @@ class M4Command(CliCommand):
         )
         plug_pairs = prompt_plugboard()
 
-        config = self._build_config(
+        window, encrypted, decrypted = self._round_trip(
             text=text,
             key=key,
             mode=MachineModeName.M4,
@@ -211,18 +228,6 @@ class M4Command(CliCommand):
             plug_pairs=plug_pairs,
             greek_rotor_name=greek_rotor_name,
         )
-        window, encrypted = process_config(config)
-        decrypt_config = self._build_config(
-            text=encrypted,
-            key=key,
-            mode=MachineModeName.M4,
-            rotor_order=rotor_order,
-            ring_settings=ring_settings,
-            reflector_name=reflector_name,
-            plug_pairs=plug_pairs,
-            greek_rotor_name=greek_rotor_name,
-        )
-        _, decrypted = process_config(decrypt_config)
         return (
             f"\nRotor window: [{window}]\n"
             f"Encrypted:  {encrypted}\n"
@@ -256,7 +261,6 @@ class DailyKeySheetCommand(CliCommand):
         )
 
         key_config = self._build_config(
-            text=message_key_encrypted,
             key=ground_setting,
             mode=MachineModeName.WEHRMACHT,
             rotor_order=rotor_order,
@@ -264,13 +268,13 @@ class DailyKeySheetCommand(CliCommand):
             reflector_name=reflector_name,
             plug_pairs=plug_pairs,
         )
-        _, message_key = process_config(key_config)
+        _, message_key = process_config(key_config, message_key_encrypted)
 
         text = input("\nEnter message to encrypt: ")[:MAX_MESSAGE_LENGTH]
         if not text:
             return "No message entered."
 
-        encrypt_config = self._build_config(
+        _, encrypted, decrypted = self._round_trip(
             text=text,
             key=message_key,
             mode=MachineModeName.WEHRMACHT,
@@ -279,18 +283,6 @@ class DailyKeySheetCommand(CliCommand):
             reflector_name=reflector_name,
             plug_pairs=plug_pairs,
         )
-        _, encrypted = process_config(encrypt_config)
-
-        decrypt_config = self._build_config(
-            text=encrypted,
-            key=message_key,
-            mode=MachineModeName.WEHRMACHT,
-            rotor_order=rotor_order,
-            ring_settings=ring_settings,
-            reflector_name=reflector_name,
-            plug_pairs=plug_pairs,
-        )
-        _, decrypted = process_config(decrypt_config)
 
         return (
             f"Rotor order: {' '.join(rotor_order)}\n"

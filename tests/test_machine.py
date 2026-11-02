@@ -3,38 +3,11 @@
 from __future__ import annotations
 
 import pytest
+from helpers import make_machine, make_rotor
 
-from enigma import EnigmaConfigBuilder, EnigmaFactory
 from enigma.machine import EnigmaMachine, _should_step_rotors
 from enigma.modes import MachineModeName
 from enigma.plugboard import Plugboard
-from enigma.rotors import Rotor
-
-
-def make_machine(
-    *,
-    text: str = "",
-    key: str = "AAA",
-    mode: MachineModeName | str = MachineModeName.WEHRMACHT,
-    rotor_order: tuple[str, ...] = ("I", "II", "III"),
-    ring_settings: tuple[int, ...] = (1, 1, 1),
-    reflector_name: str = "B",
-    plug_pairs: tuple[tuple[str, str], ...] = (),
-    greek_rotor_name: str = "BETA",
-):
-    config = (
-        EnigmaConfigBuilder()
-        .text(text)
-        .mode(mode)
-        .rotors(rotor_order)
-        .rings(ring_settings)
-        .key(key)
-        .reflector(reflector_name)
-        .plugboard(plug_pairs)
-        .greek(greek_rotor_name)
-        .build()
-    )
-    return EnigmaFactory().create(config)
 
 
 def test_machine_state_is_mutable_between_process_text_calls() -> None:
@@ -61,7 +34,7 @@ def test_machine_reset_restores_initial_rotor_state() -> None:
 
 
 def test_machine_clones_rotor_state_from_reused_rotor_objects() -> None:
-    shared_rotors = [Rotor("I"), Rotor("II"), Rotor("III")]
+    shared_rotors = [make_rotor("I"), make_rotor("II"), make_rotor("III")]
     first_machine = EnigmaMachine(shared_rotors, "B", Plugboard())
     second_machine = EnigmaMachine(shared_rotors, "B", Plugboard())
     expected = make_machine(key="AAA").process_text("AAAA")
@@ -73,43 +46,49 @@ def test_machine_clones_rotor_state_from_reused_rotor_objects() -> None:
 
 def test_machine_rejects_incorrect_moving_rotor_count() -> None:
     with pytest.raises(ValueError, match="exactly 3 moving rotors"):
-        EnigmaMachine([Rotor("I"), Rotor("II")], "B", Plugboard())
+        EnigmaMachine([make_rotor("I"), make_rotor("II")], "B", Plugboard())
 
 
 def test_machine_rejects_non_moving_rotor_in_moving_slots() -> None:
     with pytest.raises(ValueError, match="Moving rotors"):
-        EnigmaMachine([Rotor("I"), Rotor("II"), Rotor("BETA")], "B", Plugboard())
+        EnigmaMachine(
+            [make_rotor("I"), make_rotor("II"), make_rotor("BETA")], "B", Plugboard()
+        )
 
 
 def test_machine_rejects_duplicate_moving_rotors() -> None:
     with pytest.raises(ValueError, match="unique"):
-        EnigmaMachine([Rotor("I"), Rotor("II"), Rotor("II")], "B", Plugboard())
+        EnigmaMachine(
+            [make_rotor("I"), make_rotor("II"), make_rotor("II")], "B", Plugboard()
+        )
 
 
 def test_machine_rejects_unknown_reflector() -> None:
     with pytest.raises(ValueError, match="Unknown reflector"):
-        EnigmaMachine([Rotor("I"), Rotor("II"), Rotor("III")], "D", Plugboard())
+        EnigmaMachine(
+            [make_rotor("I"), make_rotor("II"), make_rotor("III")], "D", Plugboard()
+        )
 
 
 def test_machine_rejects_invalid_greek_rotor() -> None:
     with pytest.raises(ValueError, match="Greek rotor"):
         EnigmaMachine(
-            [Rotor("I"), Rotor("II"), Rotor("III")],
+            [make_rotor("I"), make_rotor("II"), make_rotor("III")],
             "B",
             Plugboard(),
-            greek_rotor=Rotor("I", can_step=False),
+            greek_rotor=make_rotor("I", can_step=False),
         )
 
 
 def test_machine_accepts_valid_non_stepping_greek_rotor() -> None:
     machine = EnigmaMachine(
-        [Rotor("I"), Rotor("II"), Rotor("III")],
+        [make_rotor("I"), make_rotor("II"), make_rotor("III")],
         "B_THIN",
         Plugboard(),
-        greek_rotor=Rotor("BETA", can_step=False),
+        greek_rotor=make_rotor("BETA", can_step=False),
     )
 
-    assert machine.window() == "A AAA"
+    assert machine.window() == "AAA A"
 
 
 def test_right_rotor_steps_for_each_alphabetic_character() -> None:
@@ -205,3 +184,28 @@ def test_process_char_uses_existing_advanced_rotor_positions() -> None:
     expected_machine = make_machine(key="AAC")
 
     assert machine.process_char("A") == expected_machine.encode_signal("A")
+
+
+def test_m4_window_round_trips_through_key() -> None:
+    machine = make_machine(
+        key="JNAV",
+        mode=MachineModeName.M4,
+        ring_settings=(1, 1, 1, 1),
+        reflector_name="B_THIN",
+    )
+
+    rebuilt = make_machine(
+        key=machine.window().replace(" ", ""),
+        mode=MachineModeName.M4,
+        ring_settings=(1, 1, 1, 1),
+        reflector_name="B_THIN",
+    )
+
+    assert rebuilt.window() == machine.window()
+
+
+def test_process_text_rejects_non_string_input() -> None:
+    machine = make_machine()
+
+    with pytest.raises(ValueError, match="Text must be a string"):
+        machine.process_text(None)  # type: ignore[arg-type]

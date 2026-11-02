@@ -1,39 +1,14 @@
-"""Configuration builder and factory validation tests."""
+"""EnigmaConfig construction and validation tests."""
 
 from __future__ import annotations
 
 import pytest
+from helpers import make_machine
 
-from enigma import EnigmaConfigBuilder, EnigmaFactory, enigma_process
-
-
-def make_machine(
-    *,
-    text: str = "",
-    key: str = "AAA",
-    mode: str = "wehrmacht",
-    rotor_order: tuple[str, ...] = ("I", "II", "III"),
-    ring_settings: tuple[int, ...] = (1, 1, 1),
-    reflector_name: str = "B",
-    plug_pairs: tuple[tuple[str, str], ...] = (),
-    greek_rotor_name: str = "BETA",
-):
-    config = (
-        EnigmaConfigBuilder()
-        .text(text)
-        .mode(mode)
-        .rotors(rotor_order)
-        .rings(ring_settings)
-        .key(key)
-        .reflector(reflector_name)
-        .plugboard(plug_pairs)
-        .greek(greek_rotor_name)
-        .build()
-    )
-    return EnigmaFactory().create(config)
+from enigma import EnigmaConfig, MachineModeName, enigma_process
 
 
-def test_factory_creates_independent_rotor_states() -> None:
+def test_from_config_creates_independent_rotor_states() -> None:
     first_machine = make_machine(key="AAA")
     second_machine = make_machine(key="AAA")
 
@@ -57,6 +32,17 @@ def test_m4_rejects_invalid_greek_rotor() -> None:
         )
 
 
+def test_three_rotor_mode_also_rejects_invalid_greek_rotor() -> None:
+    """Greek rotor identity is checked for every mode, not only M4.
+
+    Three-rotor mode never uses the Greek rotor, but an explicitly invalid
+    value is still rejected rather than silently accepted and ignored.
+    """
+
+    with pytest.raises(ValueError, match="Greek rotor"):
+        make_machine(greek_rotor_name="I")
+
+
 def test_m4_rejects_incompatible_reflector() -> None:
     with pytest.raises(ValueError, match="thin reflectors"):
         make_machine(
@@ -77,7 +63,7 @@ def test_key_with_incorrect_size_fails() -> None:
         make_machine(key="AB")
 
 
-def test_builder_rejects_non_integer_ring_settings_with_predictable_message() -> None:
+def test_enigma_process_rejects_non_integer_ring_settings() -> None:
     with pytest.raises(ValueError, match="Ring settings must be integers"):
         enigma_process(
             text="HELLO",
@@ -86,7 +72,7 @@ def test_builder_rejects_non_integer_ring_settings_with_predictable_message() ->
         )
 
 
-def test_builder_rejects_non_text_rotor_names_with_predictable_message() -> None:
+def test_enigma_process_rejects_non_text_rotor_names() -> None:
     with pytest.raises(ValueError, match="Rotor names must be text"):
         enigma_process(
             text="HELLO",
@@ -95,7 +81,42 @@ def test_builder_rejects_non_text_rotor_names_with_predictable_message() -> None
         )
 
 
-def test_builder_creates_machine_with_expected_window() -> None:
-    machine = make_machine(text="HELLO", key="ABC")
+def test_direct_config_creates_machine_with_expected_window() -> None:
+    machine = make_machine(key="ABC")
 
     assert machine.window() == "ABC"
+
+
+def test_config_mode_defaults_to_wehrmacht() -> None:
+    config = EnigmaConfig(
+        rotor_order=("I", "II", "III"),
+        ring_settings=(1, 1, 1),
+        key="AAA",
+        reflector_name="B",
+    )
+
+    assert config.mode == MachineModeName.WEHRMACHT
+
+
+def test_config_mode_accepts_explicit_value() -> None:
+    config = EnigmaConfig(
+        rotor_order=("I", "II", "III"),
+        ring_settings=(1, 1, 1, 1),
+        key="AAAA",
+        reflector_name="B_THIN",
+        mode=MachineModeName.M4,
+    )
+
+    assert config.mode == MachineModeName.M4
+
+
+def test_direct_config_normalizes_mutable_containers_to_hashable_tuples() -> None:
+    config = EnigmaConfig(
+        rotor_order=["I", "II", "III"],  # type: ignore[arg-type]
+        ring_settings=(1, 1, 1),
+        key="AAA",
+        reflector_name="B",
+    )
+
+    assert config.rotor_order == ("I", "II", "III")
+    hash(config)

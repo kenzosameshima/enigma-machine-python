@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 
-from .alphabet import is_base_letter
+from .alphabet import ascii_upper, is_base_letter
 
 
 class Plugboard:
@@ -30,7 +30,7 @@ class Plugboard:
             raise ValueError("Plugboard supports up to 10 pairs")
 
         for pair in pairs:
-            a, b = _normalize_pair(pair)
+            a, b = normalize_pair(pair)
             if a == b:
                 raise ValueError(f"Plugboard pair cannot repeat a letter: {a}-{b}")
             if a in mapping or b in mapping:
@@ -40,7 +40,14 @@ class Plugboard:
         return mapping
 
 
-def _normalize_pair(pair: object) -> tuple[str, str]:
+def normalize_pairs(pairs: Sequence[tuple[str, str]]) -> tuple[tuple[str, str], ...]:
+    """Validate and normalize plugboard pairs."""
+
+    Plugboard(pairs)
+    return tuple(normalize_pair(pair) for pair in pairs)
+
+
+def normalize_pair(pair: object) -> tuple[str, str]:
     if not isinstance(pair, (list, tuple)) or len(pair) != 2:
         raise ValueError("Plugboard pair must contain exactly two letters")
 
@@ -48,8 +55,8 @@ def _normalize_pair(pair: object) -> tuple[str, str]:
     if not isinstance(first, str) or not isinstance(second, str):
         raise ValueError("Plugboard pair values must be letters")
 
-    a = first.upper()
-    b = second.upper()
-    if len(a) != 1 or len(b) != 1 or not is_base_letter(a) or not is_base_letter(b):
+    a = ascii_upper(first)
+    b = ascii_upper(second)
+    if not is_base_letter(a) or not is_base_letter(b):
         raise ValueError(f"Invalid plugboard pair: {first}-{second}")
     return a, b

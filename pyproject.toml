@@ -17,7 +17,10 @@ dev = [
     "pytest-cov>=5.0",
     "ruff>=0.5",
     "mypy>=1.8",
+    "hypothesis>=6.100",
+    "pytest-randomly>=3.15",
 ]
+mutation = ["cosmic-ray==8.7.0"]
 
 [project.scripts]
 enigma-machine = "enigma.cli:main"
@@ -28,14 +31,17 @@ include = ["enigma*"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 python_files = ["test_*.py"]
-addopts = "-q"
+addopts = "-q -ra --strict-markers --strict-config"
+xfail_strict = true
+filterwarnings = ["error"]
+markers = ["slow: exhaustive or long-running checks"]
 
 [tool.coverage.run]
 branch = true
 source = ["enigma"]
 
 [tool.coverage.report]
-fail_under = 80
+fail_under = 90
 show_missing = true
 skip_covered = true
 
@@ -44,7 +50,14 @@ line-length = 88
 target-version = "py310"
 
 [tool.ruff.lint]
-select = ["E", "F", "I", "UP", "B", "SIM"]
+select = ["E", "F", "I", "UP", "B", "SIM", "C4", "C90", "PL", "RUF", "PT"]
+ignore = ["PLR2004"] # magic-value noise from 26/3/4 in cipher code
+
+[tool.ruff.lint.mccabe]
+max-complexity = 10
+
+[tool.ruff.lint.per-file-ignores]
+"enigma/**" = ["PT"]
 
 [tool.ruff.format]
 quote-style = "double"
@@ -52,7 +65,5 @@ indent-style = "space"
 
 [tool.mypy]
 python_version = "3.10"
-packages = ["enigma"]
-ignore_missing_imports = true
-warn_unused_ignores = true
-warn_redundant_casts = true
+files = ["enigma", "tests"]
+strict = true

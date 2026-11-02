@@ -16,9 +16,9 @@ class RotorSpec:
     notch: str
 
 
-@dataclass
+@dataclass(frozen=True)
 class RotorState:
-    """Mutable rotor state."""
+    """Immutable rotor state: ring setting and window position."""
 
     ring: int
     position: int
@@ -29,23 +29,13 @@ class Rotor:
 
     def __init__(
         self,
-        spec: RotorSpec | str,
+        spec: RotorSpec,
         state: RotorState | None = None,
         can_step: bool = True,
-        ring_setting: int = 1,
-        position: str = "A",
     ) -> None:
-        if isinstance(spec, str):
-            from .data import ROTOR_SPECS
-
-            spec = ROTOR_SPECS[spec]
-
         self.spec = spec
         self.name = self.spec.name
-        self.state = state or RotorState(
-            ring=ring_setting - 1,
-            position=letter_to_index(position),
-        )
+        self.state = state or RotorState(ring=0, position=0)
         self.can_step = can_step
         self.wiring = [letter_to_index(char) for char in self.spec.wiring]
         self.inverse_wiring = [0] * 26
@@ -82,7 +72,26 @@ class Rotor:
         """Advance the rotor if it is allowed to move."""
 
         if self.can_step:
-            self.state.position = (self.position + 1) % 26
+            self.state = RotorState(ring=self.ring, position=(self.position + 1) % 26)
+
+    def clone(self) -> Rotor:
+        """Return an independent rotor with the same spec, state, and stepping ability.
+
+        Safe to share self.state directly with the clone: RotorState is frozen,
+        so neither rotor's later stepping can affect the other's state.
+        """
+
+        return Rotor(self.spec, self.state, can_step=self.can_step)
+
+    def snapshot(self) -> RotorState:
+        """Return the current state, safe to keep and restore later."""
+
+        return self.state
+
+    def restore(self, state: RotorState) -> None:
+        """Reset rotor state to a previously captured snapshot."""
+
+        self.state = state
 
     def encode_forward(self, index: int) -> int:
         """Encode right-to-left through the rotor."""
